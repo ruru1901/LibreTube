@@ -68,7 +68,6 @@ class HomeViewModel : ViewModel() {
 
     private val categoryFeedRepository = CategoryFeedRepository()
     private var lastPrefHash: Int? = null
-    private val seenVideoIds = mutableSetOf<String>()
 
     fun loadHomeFeed(
         context: Context,
@@ -188,7 +187,6 @@ class HomeViewModel : ViewModel() {
         val prefHash = (categories.toString() + languages.toString()).hashCode()
         if (lastPrefHash != null && lastPrefHash != prefHash) {
             categoryFeedRepository.reset()
-            seenVideoIds.clear()
         }
         lastPrefHash = prefHash
 
@@ -206,13 +204,10 @@ class HomeViewModel : ViewModel() {
 
                         val filtered = if (items.isNotEmpty()) {
                             CategoryFeedManager.scoreAndFilter(items, context)
-                                .filter { it.url != null && it.url !in seenVideoIds }
                                 .take(20)
                         } else {
                             emptyList()
                         }
-
-                        filtered.forEach { seenVideoIds.add(it.url ?: "") }
 
                         queryDef to filtered
                     }
@@ -223,7 +218,6 @@ class HomeViewModel : ViewModel() {
         val nonEmpty = results.filter { it.second.isNotEmpty() }
 
         if (nonEmpty.isNotEmpty()) {
-            val allVideos = nonEmpty.flatMap { it.second }
             val uniqueByUrl = mutableSetOf<String>()
             val dedupedResults = nonEmpty.map { (queryDef, videos) ->
                 queryDef to videos.filter { it.url != null && uniqueByUrl.add(it.url) }
