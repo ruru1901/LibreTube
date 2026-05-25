@@ -30,11 +30,6 @@ object PreferenceHelper {
     lateinit var settings: SharedPreferences
 
     /**
-     * For sensitive data (like token)
-     */
-    private lateinit var authSettings: SharedPreferences
-
-    /**
      * Possible chars to use for the SB User ID
      */
     private const val USER_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
@@ -60,7 +55,6 @@ object PreferenceHelper {
             putString(PreferenceKeys.TRENDING_CATEGORY, TrendingCategory.LIVE.name)
         },
         PreferenceMigration(2, 3) {
-            // git log -p -- app/src/main/java/com/github/libretube/constants/PreferenceKeys.kt | rg "^-.*const val [A-Z_]+" | awk '{printf("%s,", $6);}' | sort | uniq
             listOf(
                 "player_audio_format",
                 "lbry_hls",
@@ -76,8 +70,6 @@ object PreferenceHelper {
                 "background_playback_speed",
                 "player_resize_mode",
                 "alternative_videos_layout",
-                "clearCustomInstances",
-                "auth",
                 "image_proxy_url",
                 "dearrow",
                 "unlimited_search_history",
@@ -88,7 +80,6 @@ object PreferenceHelper {
                 "sb_contribute_key",
                 "dearrow_contribute_key",
                 "sb_user_id",
-                "fallback_piped_proxy",
                 "picture_in_picture",
                 "pause_on_quit",
                 "save_feed",
@@ -154,7 +145,6 @@ object PreferenceHelper {
      */
     fun initialize(context: Context) {
         settings = getDefaultSharedPreferences(context)
-        authSettings = getAuthenticationPreferences(context)
     }
 
     /**
@@ -226,22 +216,6 @@ object PreferenceHelper {
 
     fun clearPreferences() {
         settings.edit { clear() }
-    }
-
-    fun getToken(): String {
-        return authSettings.getString(PreferenceKeys.TOKEN, "")!!
-    }
-
-    fun setToken(newValue: String) {
-        authSettings.edit { putString(PreferenceKeys.TOKEN, newValue) }
-    }
-
-    fun getUsername(): String {
-        return authSettings.getString(PreferenceKeys.USERNAME, "")!!
-    }
-
-    fun setUsername(newValue: String) {
-        authSettings.edit { putString(PreferenceKeys.USERNAME, newValue) }
     }
 
     fun updateLastFeedWatchedTime(time: Long, seenByUser: Boolean) {
@@ -316,9 +290,5 @@ object PreferenceHelper {
 
     private fun getDefaultSharedPreferences(context: Context): SharedPreferences {
         return PreferenceManager.getDefaultSharedPreferences(context)
-    }
-
-    private fun getAuthenticationPreferences(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PreferenceKeys.AUTH_PREF_FILE, Context.MODE_PRIVATE)
     }
 }

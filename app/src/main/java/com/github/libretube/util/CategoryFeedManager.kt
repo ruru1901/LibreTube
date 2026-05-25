@@ -3,8 +3,6 @@ package com.github.libretube.util
 import android.content.Context
 import com.github.libretube.R
 import com.github.libretube.api.obj.StreamItem
-import com.github.libretube.db.DatabaseHolder
-import com.github.libretube.helpers.PlayerHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -107,14 +105,9 @@ object CategoryFeedManager {
 
     suspend fun scoreAndFilter(
         items: List<StreamItem>,
+        watchedIds: Set<String>,
         context: Context
     ): List<StreamItem> = withContext(Dispatchers.Default) {
-        val watchedIds = if (PlayerHelper.watchHistoryEnabled) {
-            DatabaseHolder.Database.watchHistoryDao().getAll().map { it.videoId }.toSet()
-        } else {
-            emptySet()
-        }
-
         val seenIds = mutableSetOf<String>()
         items
             .filter { !it.isShort }

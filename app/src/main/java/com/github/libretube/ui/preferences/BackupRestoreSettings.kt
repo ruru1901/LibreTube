@@ -233,13 +233,11 @@ class BackupRestoreSettings : BasePreferenceFragment() {
             ImportFormat.FREETUBE
         )
         val importPlaylistFormatList = listOf(
-            ImportFormat.PIPED,
             ImportFormat.FREETUBE,
             ImportFormat.YOUTUBECSV,
             ImportFormat.URLSORIDS
         )
         val exportPlaylistFormatList = listOf(
-            ImportFormat.PIPED,
             ImportFormat.FREETUBE
         )
         val importWatchHistoryFormatList = listOf(ImportFormat.YOUTUBEJSON)

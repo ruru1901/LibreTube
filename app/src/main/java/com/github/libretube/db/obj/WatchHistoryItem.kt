@@ -19,7 +19,12 @@ data class WatchHistoryItem(
     @ColumnInfo var uploaderAvatar: String? = null,
     @ColumnInfo var thumbnailUrl: String? = null,
     @ColumnInfo val duration: Long? = null,
-    @ColumnInfo val isShort: Boolean = false
+    @ColumnInfo val isShort: Boolean = false,
+    @ColumnInfo val channelId: String? = null,
+    @ColumnInfo val categoryId: String? = null,
+    @ColumnInfo val tags: String? = null,
+    @ColumnInfo val watchPercent: Float? = null,
+    @ColumnInfo val languageCode: String? = null
 ) {
     val isLive get() = (duration == null) || (duration <= 0L)
 

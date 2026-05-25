@@ -67,7 +67,7 @@ class HomeViewModel : ViewModel() {
     private var loadHomeJob: Job? = null
 
     private val categoryFeedRepository = CategoryFeedRepository()
-    private var lastPrefHash: Int? = null
+    private var lastPrefs: Pair<List<String>, List<String>>? = null
 
     fun loadHomeFeed(
         context: Context,
@@ -172,6 +172,26 @@ class HomeViewModel : ViewModel() {
         )
     }
 
+    private suspend fun fetchFilteredPage(
+        query: String,
+        context: Context,
+        watchedIds: Set<String>
+    ): List<StreamItem> {
+        var attempts = 0
+        while (attempts < 3) {
+            val items = runCatching {
+                categoryFeedRepository.getSearchPage(query)
+            }.getOrElse {
+                return emptyList()
+            }
+            if (items.isEmpty()) return emptyList()
+            val filtered = CategoryFeedManager.scoreAndFilter(items, watchedIds, context)
+            if (filtered.isNotEmpty()) return filtered.take(20)
+            attempts++
+        }
+        return emptyList()
+    }
+
     private suspend fun loadPersonalizedCategories(context: Context) {
         val rawCategories = PreferenceHelper.getString(PreferenceKeys.PREFERRED_CATEGORIES, "")
             .split(",").map { it.trim() }.filter { it.isNotBlank() }
@@ -184,11 +204,19 @@ class HomeViewModel : ViewModel() {
         val categories = resolvedCategories.ifEmpty { listOf("gaming", "music", "education", "tech", "movies") }
         val languages = resolvedLanguages.ifEmpty { listOf("en") }
 
-        val prefHash = (categories.toString() + languages.toString()).hashCode()
-        if (lastPrefHash != null && lastPrefHash != prefHash) {
+        val currentPrefs = Pair(categories, languages)
+        if (lastPrefs != null && lastPrefs != currentPrefs) {
             categoryFeedRepository.reset()
         }
-        lastPrefHash = prefHash
+        lastPrefs = currentPrefs
+
+        val watchedIds = if (PlayerHelper.watchHistoryEnabled) {
+            withContext(Dispatchers.IO) {
+                DatabaseHolder.Database.watchHistoryDao().getAll().map { it.videoId }.toSet()
+            }
+        } else {
+            emptySet()
+        }
 
         val queries = CategoryFeedManager.buildQueries(categories, languages)
 
@@ -196,20 +224,7 @@ class HomeViewModel : ViewModel() {
             coroutineScope {
                 queries.map { queryDef ->
                     async {
-                        val items = runCatching {
-                            categoryFeedRepository.getSearchPage(queryDef.query)
-                        }.getOrElse {
-                            emptyList()
-                        }
-
-                        val filtered = if (items.isNotEmpty()) {
-                            CategoryFeedManager.scoreAndFilter(items, context)
-                                .take(20)
-                        } else {
-                            emptyList()
-                        }
-
-                        queryDef to filtered
+                        queryDef to fetchFilteredPage(queryDef.query, context, watchedIds)
                     }
                 }.awaitAll()
             }

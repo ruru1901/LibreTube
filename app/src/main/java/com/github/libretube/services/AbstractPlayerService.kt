@@ -35,6 +35,7 @@ import com.github.libretube.extensions.TAG
 import com.github.libretube.extensions.parcelableExtra
 import com.github.libretube.extensions.toastFromMainThread
 import com.github.libretube.extensions.updateParameters
+import com.github.libretube.db.DatabaseHolder
 import com.github.libretube.helpers.PlayerHelper
 import com.github.libretube.helpers.PlayerHelper.getCurrentSegment
 import com.github.libretube.ui.activities.MainActivity
@@ -412,7 +413,29 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
     private fun saveWatchPosition() {
         if (isTransitioning || !watchPositionsEnabled || !::videoId.isInitialized) return
 
-        exoPlayer?.let { PlayerHelper.saveWatchPosition(it, videoId) }
+        exoPlayer?.let { player ->
+            PlayerHelper.saveWatchPosition(player, videoId)
+
+            val duration = player.duration
+            if (duration > 0 && player.currentPosition > 0 && duration != C.TIME_UNSET) {
+                val percent = (player.currentPosition.toFloat() / duration.toFloat()) * 100f
+                val secondsLeft = (duration - player.currentPosition) / 1000f
+                CoroutineScope(Dispatchers.IO).launch {
+                    val existing = DatabaseHolder.Database.watchHistoryDao().findById(videoId)
+                    if (existing != null) {
+                        // remove from continue watching if nearly finished (<30s left or >90% watched)
+                        if (secondsLeft <= 30f || percent >= 90f) {
+                            DatabaseHolder.Database.watchHistoryDao().delete(existing)
+                            DatabaseHolder.Database.watchPositionDao().deleteByVideoId(videoId)
+                        } else {
+                            DatabaseHolder.Database.watchHistoryDao().insert(
+                                existing.copy(watchPercent = percent)
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun onMediaButtonEvent(

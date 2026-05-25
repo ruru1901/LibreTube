@@ -1,6 +1,7 @@
 package com.github.libretube.ui.adapters
 
 import android.annotation.SuppressLint
+import android.text.format.DateUtils
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
@@ -11,8 +12,9 @@ import androidx.recyclerview.widget.ListAdapter
 import com.github.libretube.api.SponsorBlockLabelHelper
 import com.github.libretube.api.obj.StreamItem
 import com.github.libretube.constants.IntentData
+import com.github.libretube.R
 import com.github.libretube.databinding.AllCaughtUpRowBinding
-import com.github.libretube.databinding.TrendingRowBinding
+import com.github.libretube.databinding.ItemVideoBinding
 import com.github.libretube.extensions.dpToPx
 import com.github.libretube.extensions.toID
 import com.github.libretube.helpers.ImageHelper
@@ -25,6 +27,7 @@ import com.github.libretube.ui.extensions.setFormattedDuration
 import com.github.libretube.ui.extensions.setWatchProgressLength
 import com.github.libretube.ui.sheets.VideoOptionsBottomSheet
 import com.github.libretube.ui.viewholders.VideoCardsViewHolder
+import com.github.libretube.extensions.formatShort
 import com.github.libretube.util.DeArrowUtil
 import com.github.libretube.util.TextUtils
 import kotlinx.coroutines.CoroutineScope
@@ -58,7 +61,7 @@ class VideoCardsAdapter(private val columnWidthDp: Float? = null) :
             )
 
             else -> VideoCardsViewHolder(
-                TrendingRowBinding.inflate(layoutInflater, parent, false)
+                ItemVideoBinding.inflate(layoutInflater, parent, false)
             )
         }
     }
@@ -68,12 +71,11 @@ class VideoCardsAdapter(private val columnWidthDp: Float? = null) :
         val video = getItem(holder.bindingAdapterPosition)
         val videoId = video.url.orEmpty().toID()
 
-        val context = (holder.trendingRowBinding ?: holder.allCaughtUpBinding)!!.root.context
+        val context = (holder.itemVideoBinding ?: holder.allCaughtUpBinding)!!.root.context
         val activity = (context as BaseActivity)
         val fragmentManager = activity.supportFragmentManager
 
-        holder.trendingRowBinding?.apply {
-            // set a fixed width for better visuals
+        holder.itemVideoBinding?.apply {
             if (columnWidthDp != null) {
                 root.updateLayoutParams {
                     width = columnWidthDp.dpToPx()
@@ -81,12 +83,16 @@ class VideoCardsAdapter(private val columnWidthDp: Float? = null) :
             }
             watchProgress.setWatchProgressLength(videoId, video.duration ?: 0L)
 
-            textViewTitle.text = video.title
-            textViewChannel.text = TextUtils.formatViewsString(
-                root.context,
-                video.views ?: -1,
+            videoTitle.text = video.title
+            channelName.text = video.uploaderName
+            videoViews.text = root.context.getString(
+                R.string.view_count,
+                (video.views ?: -1).formatShort()
+            )
+            uploadAge.text = DateUtils.getRelativeTimeSpanString(
                 video.uploaded,
-                video.uploaderName
+                System.currentTimeMillis(),
+                DateUtils.MINUTE_IN_MILLIS
             )
 
             video.duration?.let {
@@ -97,19 +103,8 @@ class VideoCardsAdapter(private val columnWidthDp: Float? = null) :
                 )
             }
             ImageHelper.loadImage(video.thumbnail, thumbnail)
+            ImageHelper.loadImage(video.uploaderAvatar, channelAvatar)
 
-            if (video.uploaderAvatar != null) {
-                channelImageContainer.isVisible = true
-                ImageHelper.loadImage(video.uploaderAvatar, channelImage, true)
-                channelImage.setOnClickListener {
-                    NavigationHelper.navigateChannel(root.context, video.uploaderUrl)
-                }
-            } else {
-                channelImageContainer.isGone = true
-                textViewChannel.setOnClickListener {
-                    NavigationHelper.navigateChannel(root.context, video.uploaderUrl)
-                }
-            }
             root.setOnClickListener {
                 NavigationHelper.navigateVideo(root.context, PlayerData(videoId))
             }
@@ -127,7 +122,6 @@ class VideoCardsAdapter(private val columnWidthDp: Float? = null) :
                 true
             }
 
-            // always hide the icon, to avoid issues where the icon is recycled and shown until the web requests succeeds
             sponsorBadgeCard.isVisible = false
             CoroutineScope(Dispatchers.IO).launch {
                 if (PlayerHelper.sponsorBlockEnabled) {
@@ -148,7 +142,7 @@ class VideoCardsAdapter(private val columnWidthDp: Float? = null) :
 
                 DeArrowUtil.deArrowVideoId(videoId)?.let { (title, thumbnail) ->
                     withContext(Dispatchers.Main) {
-                        if (title != null) this@apply.textViewTitle.text = title
+                        if (title != null) this@apply.videoTitle.text = title
                         if (thumbnail != null) ImageHelper.loadImage(thumbnail, this@apply.thumbnail)
                     }
                 }

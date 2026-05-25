@@ -51,7 +51,6 @@ import com.github.libretube.parcelable.PlayerData
 import com.github.libretube.ui.dialogs.ErrorDialog
 import com.github.libretube.ui.dialogs.ImportTempPlaylistDialog
 import com.github.libretube.ui.extensions.onSystemInsets
-import com.github.libretube.ui.fragments.DownloadsFragment
 import com.github.libretube.ui.models.DownloadsViewModel
 import com.github.libretube.ui.models.PlaylistViewModel
 import com.github.libretube.ui.models.SearchViewModel
@@ -59,6 +58,7 @@ import com.github.libretube.ui.models.SubscriptionsViewModel
 import com.github.libretube.ui.preferences.BackupRestoreSettings
 import com.github.libretube.ui.preferences.BackupRestoreSettings.Companion.FILETYPE_ANY
 import com.github.libretube.util.UpdateChecker
+import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -102,6 +102,7 @@ class MainActivity : AbstractPlayerHostActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        DynamicColors.applyToActivityIfAvailable(this)
         installSplashScreen()
         super.onCreate(savedInstanceState)
 
@@ -190,6 +191,11 @@ class MainActivity : AbstractPlayerHostActivity() {
         // set default tab as start fragment
         navController.graph = navController.navInflater.inflate(R.navigation.nav).also {
             it.setStartDestination(startFragmentId)
+        }
+
+        // show onboarding on first launch
+        if (!PreferenceHelper.getBoolean(PreferenceKeys.ONBOARDING_COMPLETE, false)) {
+            navController.navigate(R.id.onboardingFragment)
         }
 
         // Prevent duplicate entries into backstack, if selected item and current
@@ -329,7 +335,6 @@ class MainActivity : AbstractPlayerHostActivity() {
         // automatically set a different search icon in the playlists
         navController.addOnDestinationChangedListener { _, destination, _ ->
             currentSearchType = when (destination.id) {
-                R.id.downloadsFragment -> SearchType.DOWNLOADS
                 R.id.playlistFragment -> SearchType.PLAYLIST
                 else -> SearchType.ONLINE
             }
@@ -503,30 +508,17 @@ class MainActivity : AbstractPlayerHostActivity() {
             savedSearchQuery = it
         }
 
-        // Open the Downloads screen if requested
-        if (intent?.getBooleanExtra(IntentData.OPEN_DOWNLOADS, false) == true) {
-            navController.navigate(R.id.downloadsFragment)
-            return
-        }
 
         // Handle navigation from app shortcuts (Home, Trends, etc.)
         intent?.getStringExtra(IntentData.fragmentToOpen)?.let {
             ShortcutManagerCompat.reportShortcutUsed(this, it)
             when (it) {
                 TopLevelDestination.Home.route -> navController.navigate(R.id.homeFragment)
-                TopLevelDestination.Trends.route -> navController.navigate(R.id.trendsFragment)
                 TopLevelDestination.Subscriptions.route -> navController.navigate(R.id.subscriptionsFragment)
-                TopLevelDestination.Library.route -> navController.navigate(R.id.libraryFragment)
             }
         }
 
-        // Rebind the download service if the user is currently downloading
-        if (intent?.getBooleanExtra(IntentData.downloading, false) == true) {
-            (supportFragmentManager.fragments.find { it is NavHostFragment })
-                ?.childFragmentManager?.fragments?.forEach { fragment ->
-                    (fragment as? DownloadsFragment)?.bindDownloadService()
-                }
-        }
+
     }
 
     /**

@@ -5,10 +5,6 @@ package com.github.libretube.constants
  */
 object PreferenceKeys {
 
-    // Authentications
-    const val TOKEN = "token"
-    const val USERNAME = "username"
-
     // General
     const val LANGUAGE = "language"
     const val REGION = "region"
@@ -22,7 +18,6 @@ object PreferenceKeys {
     // Appearance
     const val THEME_MODE = "theme_toggle"
     const val PURE_THEME = "pure_theme"
-    const val ACCENT_COLOR = "accent_color"
     const val GRID_COLUMNS_PORTRAIT = "grid"
     const val GRID_COLUMNS_LANDSCAPE = "grid_landscape"
     const val LABEL_VISIBILITY = "label_visibility"
@@ -32,15 +27,6 @@ object PreferenceKeys {
     const val PLAYLIST_SORT_ORDER = "playlist_sort_order"
     const val HOME_TAB_CONTENT = "home_tab_content"
     const val SEARCH_SUGGESTIONS = "search_suggestions"
-
-    // Instance
-    const val FETCH_INSTANCE = "selectInstance"
-    const val AUTH_INSTANCE = "selectAuthInstance"
-    const val AUTH_INSTANCE_TOGGLE = "auth_instance_toggle"
-    const val CUSTOM_INSTANCE = "customInstance"
-    const val LOGIN_REGISTER = "login_register"
-    const val LOGOUT = "logout"
-    const val DELETE_ACCOUNT = "delete_account"
 
     // Player behavior
     const val AUTO_FULLSCREEN = "auto_fullscreen"
@@ -132,7 +118,6 @@ object PreferenceKeys {
 
     // Internally saved data / not a preference
     const val ERROR_LOG = "error_log"
-    const val AUTH_PREF_FILE = "auth"
     const val IMAGE_PROXY_URL = "image_proxy_url"
     const val SELECTED_CHANNEL_GROUP = "selected_channel_group"
     const val SELECTED_DOWNLOAD_SORT_TYPE = "selected_download_sort_type"
@@ -143,4 +128,12 @@ object PreferenceKeys {
     // use the helper methods at PreferenceHelper to access these
     const val LAST_USER_SEEN_FEED_TIME = "last_watched_feed_time"
     const val LAST_REFRESHED_FEED_TIME = "last_refreshed_feed_time"
+
+    // Onboarding & Content Preferences
+    const val ONBOARDING_COMPLETE = "onboarding_complete"
+    const val PREFERRED_LANGUAGES = "preferred_languages"
+    const val PREFERRED_CATEGORIES = "preferred_categories"
+
+    // Personalized category feed
+    const val CATEGORY_FEED_CACHE_TIMESTAMPS = "category_feed_cache_timestamps"
 }

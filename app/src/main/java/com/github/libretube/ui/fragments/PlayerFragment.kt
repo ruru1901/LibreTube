@@ -21,6 +21,8 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
@@ -150,6 +152,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
 
     private var autoPlayCountdownEnabled = PlayerHelper.autoPlayCountdown
 
+    private var retryCount = 0
+    private var maxRetries = 5
+    private var retryTask: Runnable? = null
+
     /**
      * The orientation of the `fragment_player.xml` that's currently used
      * This is needed in order to figure out if the current layout is the landscape one or not.
@@ -249,7 +255,73 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             }
         }
 
+        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+            super.onMediaMetadataChanged(mediaMetadata)
+
+            // JSON-encode as work-around for https://github.com/androidx/media/issues/564
+            val maybeStreams: Streams? = mediaMetadata.extras?.getString(IntentData.streams)?.let {
+                JsonHelper.json.decodeFromString(it)
+            }
+            maybeStreams?.let { streams ->
+                this@PlayerFragment.streams = streams
+                viewModel.segments.postValue(emptyList())
+                updatePlayerView()
+            }
+        }
+
+        override fun onPlaylistMetadataChanged(mediaMetadata: MediaMetadata) {
+            super.onPlaylistMetadataChanged(mediaMetadata)
+
+            mediaMetadata.extras?.getString(IntentData.videoId)?.let {
+                videoId = it
+                if (_binding != null) playerBackgroundBinding.autoplayCountdown.cancelAndHideCountdown()
+
+                // fix: if the fragment is recreated, play the current video, and not the initial one
+                arguments?.run {
+                    val playerData =
+                        parcelable<PlayerData>(IntentData.playerData)!!.copy(videoId = videoId)
+                    putParcelable(IntentData.playerData, playerData)
+                }
+            }
+
+            // JSON-encode as work-around for https://github.com/androidx/media/issues/564
+            val segments: List<Segment>? =
+                mediaMetadata.extras?.getString(IntentData.segments)?.let {
+                    JsonHelper.json.decodeFromString(it)
+                }
+            viewModel.segments.postValue(segments.orEmpty())
+        }
+
+        /**
+         * Catch player errors and retry with exponential backoff
+         */
+        override fun onPlayerError(error: PlaybackException) {
+            super.onPlayerError(error)
+            if (retryCount >= maxRetries) return
+            // don't retry if no media loaded
+            if (playerController.mediaItemCount == 0) return
+            val delayMs = (1000L shl retryCount).coerceAtMost(30000L)
+            retryCount++
+            retryTask = Runnable {
+                try {
+                    if (playerController.playbackState == Player.STATE_IDLE) {
+                        playerController.prepare()
+                    }
+                    playerController.play()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            handler.postDelayed(retryTask!!, delayMs)
+        }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_READY) {
+                retryCount = 0
+                retryTask?.let { handler.removeCallbacks(it) }
+                retryTask = null
+            }
+
             // set the playback speed to one if having reached the end of a livestream
             if (playbackState == Player.STATE_BUFFERING && streams.isLive &&
                 playerController.duration - playerController.currentPosition < 700
@@ -294,59 +366,10 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             super.onPlaybackStateChanged(playbackState)
         }
 
-        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            super.onMediaMetadataChanged(mediaMetadata)
-
-            // JSON-encode as work-around for https://github.com/androidx/media/issues/564
-            val maybeStreams: Streams? = mediaMetadata.extras?.getString(IntentData.streams)?.let {
-                JsonHelper.json.decodeFromString(it)
-            }
-            maybeStreams?.let { streams ->
-                this@PlayerFragment.streams = streams
-                viewModel.segments.postValue(emptyList())
-                updatePlayerView()
-            }
-        }
-
-        override fun onPlaylistMetadataChanged(mediaMetadata: MediaMetadata) {
-            super.onPlaylistMetadataChanged(mediaMetadata)
-
-            mediaMetadata.extras?.getString(IntentData.videoId)?.let {
-                videoId = it
-                if (_binding != null) playerBackgroundBinding.autoplayCountdown.cancelAndHideCountdown()
-
-                // fix: if the fragment is recreated, play the current video, and not the initial one
-                arguments?.run {
-                    val playerData =
-                        parcelable<PlayerData>(IntentData.playerData)!!.copy(videoId = videoId)
-                    putParcelable(IntentData.playerData, playerData)
-                }
-            }
-
-            // JSON-encode as work-around for https://github.com/androidx/media/issues/564
-            val segments: List<Segment>? =
-                mediaMetadata.extras?.getString(IntentData.segments)?.let {
-                    JsonHelper.json.decodeFromString(it)
-                }
-            viewModel.segments.postValue(segments.orEmpty())
-        }
-
-        /**
-         * Catch player errors to prevent the app from stopping
-         */
-        override fun onPlayerError(error: PlaybackException) {
-            super.onPlayerError(error)
-            try {
-                playerController.play()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             super.onMediaItemTransition(mediaItem, reason)
             if (mediaItem == null) {
-                toggleVideoInfoVisibility(false)
+                hideMetadata()
                 disableController()
                 binding.titleTextView.text = ""
             }
@@ -1100,12 +1123,51 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
             ?.dismiss()
     }
 
+    private fun hideMetadata() {
+        binding.descriptionLayout.collapseDescription()
+        binding.descriptionLayout.isInvisible = true
+        binding.relatedRecView.isInvisible = true
+        binding.playerChannel.isInvisible = true
+        // don't show skeleton during video transitions, only on initial load
+        playerBackgroundBinding.videoTransitionProgress.isVisible = true
+    }
+
     private fun toggleVideoInfoVisibility(show: Boolean) {
         binding.descriptionLayout.collapseDescription()
         binding.descriptionLayout.isInvisible = !show
         binding.relatedRecView.isInvisible = !show
         binding.playerChannel.isInvisible = !show
+        // skeleton shows when content is loading, hides when content is ready
+        binding.skeletonDescription.isVisible = !show
+        binding.skeletonChannel.isVisible = !show
+        playerBackgroundBinding.skeletonVideoOverlay.isVisible = !show
         playerBackgroundBinding.videoTransitionProgress.isVisible = !show
+        if (!show) {
+            startSkeletonAnimation()
+        } else {
+            stopSkeletonAnimation()
+        }
+    }
+
+    private fun startSkeletonAnimation() {
+        val pulse = AlphaAnimation(0.3f, 0.7f).apply {
+            duration = 800
+            repeatMode = Animation.REVERSE
+            repeatCount = Animation.INFINITE
+        }
+        binding.skeletonDescription.animation = pulse
+        binding.skeletonChannel.animation = pulse
+        playerBackgroundBinding.skeletonVideoOverlay.animation = AlphaAnimation(0.3f, 0.7f).apply {
+            duration = 800
+            repeatMode = Animation.REVERSE
+            repeatCount = Animation.INFINITE
+        }
+    }
+
+    private fun stopSkeletonAnimation() {
+        binding.skeletonDescription.clearAnimation()
+        binding.skeletonChannel.clearAnimation()
+        playerBackgroundBinding.skeletonVideoOverlay.clearAnimation()
     }
 
     private fun connectToPlayerView() {

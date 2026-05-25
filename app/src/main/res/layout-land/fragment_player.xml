@@ -24,6 +24,15 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <FrameLayout
+                android:id="@+id/skeleton_description"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_margin="12dp"
+                android:background="@drawable/skeleton_rect"
+                android:backgroundTint="?attr/colorSurfaceVariant"
+                android:visibility="visible" />
+
             <com.github.libretube.ui.views.DescriptionLayout
                 android:id="@+id/descriptionLayout"
                 android:layout_width="match_parent"
@@ -87,6 +96,16 @@
                 </LinearLayout>
 
             </HorizontalScrollView>
+
+            <FrameLayout
+                android:id="@+id/skeleton_channel"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginHorizontal="8dp"
+                android:layout_marginVertical="10dp"
+                android:background="@drawable/skeleton_rect"
+                android:backgroundTint="?attr/colorSurfaceVariant"
+                android:visibility="visible" />
 
             <LinearLayout
                 android:id="@+id/player_channel"

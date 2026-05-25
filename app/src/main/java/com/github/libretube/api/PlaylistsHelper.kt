@@ -9,7 +9,6 @@ import com.github.libretube.enums.PlaylistType
 import com.github.libretube.helpers.PreferenceHelper
 import com.github.libretube.obj.PipedImportPlaylist
 import com.github.libretube.repo.LocalPlaylistsRepository
-import com.github.libretube.repo.PipedPlaylistRepository
 import com.github.libretube.repo.PlaylistRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -21,13 +20,8 @@ object PlaylistsHelper {
         "[\\da-fA-F]{8}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{4}-[\\da-fA-F]{12}".toRegex()
     const val MAX_CONCURRENT_IMPORT_CALLS = 5
 
-    private val token get() = PreferenceHelper.getToken()
-    val loggedIn: Boolean get() = token.isNotEmpty()
     private val playlistsRepository: PlaylistRepository
-        get() = when {
-            loggedIn -> PipedPlaylistRepository()
-            else -> LocalPlaylistsRepository()
-        }
+        get() = LocalPlaylistsRepository()
 
     suspend fun getPlaylists(): List<Playlists> = withContext(Dispatchers.IO) {
         val playlists = playlistsRepository.getPlaylists()
@@ -88,7 +82,7 @@ object PlaylistsHelper {
     suspend fun deletePlaylist(playlistId: String) = playlistsRepository.deletePlaylist(playlistId)
 
     fun getPrivatePlaylistType(): PlaylistType {
-        return if (loggedIn) PlaylistType.PRIVATE else PlaylistType.LOCAL
+        return PlaylistType.LOCAL
     }
 
     fun getPlaylistType(playlistId: String): PlaylistType {

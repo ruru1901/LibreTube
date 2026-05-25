@@ -7,11 +7,9 @@ import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import com.github.libretube.R
 import com.github.libretube.api.MediaServiceRepository
-import com.github.libretube.api.obj.StreamItem
 import com.github.libretube.constants.IntentData
 import com.github.libretube.extensions.toastFromMainDispatcher
 import com.github.libretube.helpers.IntentHelper
-import com.github.libretube.helpers.PreferenceHelper
 import com.github.libretube.ui.base.BaseActivity
 import com.github.libretube.ui.dialogs.AddToPlaylistDialog
 import kotlinx.coroutines.Dispatchers
@@ -39,18 +37,14 @@ class AddToPlaylistActivity : BaseActivity() {
         ) { _, _ -> finish() }
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val videoInfo = if (PreferenceHelper.getToken().isEmpty()) {
-                try {
-                    MediaServiceRepository.instance.getStreams(videoId).toStreamItem(videoId)
-                } catch (e: Exception) {
-                    toastFromMainDispatcher(R.string.unknown_error)
-                    withContext(Dispatchers.Main) {
-                        finish()
-                    }
-                    return@launch
+            val videoInfo = try {
+                MediaServiceRepository.instance.getStreams(videoId).toStreamItem(videoId)
+            } catch (e: Exception) {
+                toastFromMainDispatcher(R.string.unknown_error)
+                withContext(Dispatchers.Main) {
+                    finish()
                 }
-            } else {
-                StreamItem(videoId)
+                return@launch
             }
 
             withContext(Dispatchers.Main) {

@@ -20,14 +20,6 @@
             app:key="pure_theme"
             app:title="@string/pure_theme" />
 
-        <ListPreference
-            android:icon="@drawable/ic_color"
-            app:defaultValue="purple"
-            app:entries="@array/accents"
-            app:entryValues="@array/accentsValue"
-            app:key="accent_color"
-            app:title="@string/color_accent"
-            app:useSimpleSummaryProvider="true" />
 
         <Preference
             android:icon="@drawable/ic_frame"

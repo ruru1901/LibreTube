@@ -15,17 +15,27 @@ class CommentRepliesPagingSource(
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, Comment> {
         return try {
-            val key = params.key.orEmpty().ifEmpty { originalComment.repliesPage.orEmpty() }
-            val result = withContext(Dispatchers.IO) {
-                MediaServiceRepository.instance.getCommentsNextPage(videoId, key)
+            val allReplies = mutableListOf<Comment>()
+            val startKey = params.key.orEmpty().ifEmpty { originalComment.repliesPage.orEmpty() }
+            var nextPage: String? = startKey
+            var pagesFetched = 0
+            val maxPages = if (params.key.isNullOrEmpty()) 3 else 1
+
+            while (nextPage != null && pagesFetched < maxPages) {
+                val result = withContext(Dispatchers.IO) {
+                    MediaServiceRepository.instance.getCommentsNextPage(videoId, nextPage)
+                }
+                val replies = result.comments.toMutableList()
+                if (params.key.isNullOrEmpty() && pagesFetched == 0 && allReplies.isEmpty()) {
+                    allReplies.add(originalComment)
+                }
+                allReplies.addAll(replies)
+                nextPage = result.nextpage
+                pagesFetched++
+                if (result.nextpage == null || result.comments.isEmpty()) break
             }
 
-            val replies = result.comments.toMutableList()
-            if (params.key.isNullOrEmpty()) {
-                replies.add(0, originalComment)
-            }
-
-            LoadResult.Page(replies, null, result.nextpage)
+            LoadResult.Page(allReplies, null, nextPage)
         } catch (e: Exception) {
             LoadResult.Error(e)
         }

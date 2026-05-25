@@ -15,10 +15,22 @@ class ChannelTabPagingSource(
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, ContentItem> {
         return try {
-            val resp = withContext(Dispatchers.IO) {
-                MediaServiceRepository.instance.getChannelTab(tab.data, params.key)
+            val allItems = mutableListOf<ContentItem>()
+            var nextPage: String? = params.key
+            var pagesFetched = 0
+            val maxPages = if (params.key == null) 5 else 1
+
+            while ((nextPage != null || params.key == null) && pagesFetched < maxPages) {
+                val resp = withContext(Dispatchers.IO) {
+                    MediaServiceRepository.instance.getChannelTab(tab.data, nextPage)
+                }
+                allItems.addAll(resp.content)
+                nextPage = resp.nextpage
+                pagesFetched++
+                if (resp.nextpage == null || resp.content.isEmpty()) break
             }
-            LoadResult.Page(resp.content, null, resp.nextpage)
+
+            LoadResult.Page(allItems, null, nextPage)
         } catch (e: Exception) {
             LoadResult.Error(e)
         }

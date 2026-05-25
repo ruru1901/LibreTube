@@ -15,6 +15,14 @@
             android:layout_height="match_parent"
             android:background="@android:color/black"/>
 
+        <FrameLayout
+            android:id="@+id/skeleton_video_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/skeleton_rect"
+            android:backgroundTint="?attr/colorSurfaceVariant"
+            android:visibility="visible" />
+
         <ImageView android:id="@id/exo_image"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -88,25 +96,27 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center|end"
-        android:layout_marginTop="15dp"
-        android:layout_marginEnd="-10dp"
-        android:paddingEnd="20dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="4dp"
         app:cardBackgroundColor="#88000000"
-        app:strokeWidth="1dp"
+        app:strokeWidth="0dp"
+        app:cardCornerRadius="12dp"
+        app:contentPadding="0dp"
         tools:ignore="RtlSymmetry">
 
         <com.github.libretube.ui.views.DrawableTextView
             android:id="@+id/sb_skip_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:drawablePadding="20dp"
-            android:padding="10dp"
+            android:drawablePadding="6dp"
+            android:paddingVertical="4dp"
+            android:paddingHorizontal="8dp"
             android:text="@string/skip_segment"
             android:textColor="@android:color/white"
-            android:textSize="18sp"
+            android:textSize="12sp"
             android:visibility="gone"
             app:drawableEndCompat="@drawable/ic_next"
-            app:drawableEndDimen="20dp"
+            app:drawableEndDimen="12dp"
             app:drawableTint="@android:color/white" />
 
     </com.google.android.material.card.MaterialCardView>

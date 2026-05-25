@@ -11,8 +11,6 @@ import com.github.libretube.api.obj.SearchResult
 import com.github.libretube.api.obj.SegmentData
 import com.github.libretube.api.obj.StreamItem
 import com.github.libretube.api.obj.Streams
-import com.github.libretube.constants.PreferenceKeys
-import com.github.libretube.helpers.PreferenceHelper
 import retrofit2.HttpException
 
 open class PipedMediaServiceRepository : MediaServiceRepository {
@@ -87,7 +85,7 @@ open class PipedMediaServiceRepository : MediaServiceRepository {
         api.getPlaylistNextPage(playlistId, nextPage)
 
     companion object {
-        val apiUrl get() = PreferenceHelper.getString(PreferenceKeys.FETCH_INSTANCE, PIPED_API_URL)
+        val apiUrl = PIPED_API_URL
 
         private val api by resettableLazy(RetrofitInstance.apiLazyMgr) {
             RetrofitInstance.buildRetrofitInstance<PipedApi>(apiUrl)

@@ -83,6 +83,11 @@ open class OnlinePlayerService : AbstractPlayerService() {
                             streams?.let { streams ->
                                 val watchHistoryItem =
                                     streams.toStreamItem(videoId).toWatchHistoryItem(videoId)
+                                        .copy(
+                                            languageCode = streams.audioStreams.firstOrNull()?.audioTrackLocale,
+                                            categoryId = streams.category,
+                                            tags = streams.tags.joinToString(",")
+                                        )
                                 DatabaseHelper.addToWatchHistory(watchHistoryItem)
                             }
                         }

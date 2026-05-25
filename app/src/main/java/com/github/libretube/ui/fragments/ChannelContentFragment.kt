@@ -91,7 +91,7 @@ class ChannelContentFragment : DynamicLayoutManagerFragment(R.layout.fragment_ch
             binding.channelRecView.adapter = searchChannelAdapter
 
             val pagingFlow = Pager(
-                PagingConfig(pageSize = 20, enablePlaceholders = false),
+                PagingConfig(pageSize = 100, enablePlaceholders = false, prefetchDistance = 50),
                 pagingSourceFactory = { ChannelTabPagingSource(tabData!!) }
             ).flow
 

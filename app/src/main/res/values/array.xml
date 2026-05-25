@@ -12,27 +12,6 @@
         <item>D</item>
     </string-array>
 
-    <string-array name="accents">
-        <item>@string/material_you</item>
-        <item>@string/color_red</item>
-        <item>@string/color_blue</item>
-        <item>@string/color_yellow</item>
-        <item>@string/color_green</item>
-        <item>@string/color_purple</item>
-        <item>@string/theme_monochrome</item>
-        <item>@string/color_violet</item>
-    </string-array>
-
-    <string-array name="accentsValue">
-        <item>my</item>
-        <item>red</item>
-        <item>blue</item>
-        <item>yellow</item>
-        <item>green</item>
-        <item>purple</item>
-        <item>monochrome</item>
-        <item>violet</item>
-    </string-array>
 
     <string-array name="defres">
         <item>@string/auto_quality</item>
@@ -291,6 +270,7 @@
         <item>@string/trending</item>
         <item>@string/bookmarks</item>
         <item>@string/playlists</item>
+        <item>@string/personalized_categories</item>
     </string-array>
 
     <string-array name="homeTabItemsValues">
@@ -299,6 +279,7 @@
         <item>trending</item>
         <item>bookmarks</item>
         <item>playlists</item>
+        <item>personalized_categories</item>
     </string-array>
 
     <string-array name="sb_skip_options">

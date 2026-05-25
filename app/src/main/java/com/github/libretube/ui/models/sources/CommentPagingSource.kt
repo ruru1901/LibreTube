@@ -15,18 +15,30 @@ class CommentPagingSource(
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, Comment> {
         return try {
-            val result = withContext(Dispatchers.IO) {
-                params.key?.let {
-                    MediaServiceRepository.instance.getCommentsNextPage(videoId, it)
-                } ?: MediaServiceRepository.instance.getComments(videoId).also {
-                    // avoid negative comment counts, i.e. because they're disabled
-                    withContext(Dispatchers.Main) {
-                        onCommentCount(maxOf(0, it.commentCount))
+            val allComments = mutableListOf<Comment>()
+            var nextPage: String? = params.key
+            var pagesFetched = 0
+            val maxPages = if (params.key == null) 5 else 1
+
+            while ((nextPage != null || params.key == null) && pagesFetched < maxPages) {
+                val result = withContext(Dispatchers.IO) {
+                    if (nextPage != null) {
+                        MediaServiceRepository.instance.getCommentsNextPage(videoId, nextPage)
+                    } else {
+                        MediaServiceRepository.instance.getComments(videoId).also {
+                            withContext(Dispatchers.Main) {
+                                onCommentCount(maxOf(0, it.commentCount))
+                            }
+                        }
                     }
                 }
+                allComments.addAll(result.comments)
+                nextPage = result.nextpage
+                pagesFetched++
+                if (result.nextpage == null || result.comments.isEmpty()) break
             }
 
-            LoadResult.Page(result.comments, null, result.nextpage)
+            LoadResult.Page(allComments, null, nextPage)
         } catch (e: Exception) {
             LoadResult.Error(e)
         }

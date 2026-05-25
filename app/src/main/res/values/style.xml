@@ -88,7 +88,7 @@
     <style name="PlayerControlCenter">
         <item name="android:layout_width">42dp</item>
         <item name="android:layout_height">42dp</item>
-        <item name="android:backgroundTint">@android:color/white</item>
+        <item name="android:backgroundTint">?attr/colorSurface</item>
         <item name="android:layout_marginStart">10dp</item>
         <item name="android:layout_marginEnd">10dp</item>
     </style>
@@ -100,7 +100,7 @@
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_gravity">center</item>
         <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
-        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
 
     </style>
 
@@ -122,7 +122,7 @@
         <item name="paddingEnd">5dp</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <style name="SwipeControlString">
@@ -133,7 +133,7 @@
         <item name="android:textSize">14sp</item>
         <item name="android:lines">1</item>
         <item name="android:textStyle">normal</item>
-        <item name="android:textColor">@android:color/white</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:text">0</item>
     </style>
 
@@ -222,6 +222,40 @@
 
     <style name="PositiveButton" parent="Widget.Material3.Button">
         <item name="android:layout_marginStart">16dp</item>
+    </style>
+
+    <style name="CornerTop12">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">12dp</item>
+        <item name="cornerSizeTopRight">12dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <style name="YTTextAppearanceTitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">22sp</item>
+        <item name="android:fontWeight">400</item>
+    </style>
+
+    <style name="YTTextAppearanceBodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontWeight">400</item>
+    </style>
+
+    <style name="YTTextAppearanceBodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontWeight">400</item>
+    </style>
+
+    <style name="YTTextAppearanceBodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontWeight">400</item>
+    </style>
+
+    <style name="YTTextAppearanceLabelSmall" parent="TextAppearance.Material3.LabelSmall">
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontWeight">500</item>
+        <item name="android:letterSpacing">0.05</item>
     </style>
 
 </resources>

@@ -62,6 +62,9 @@ open class OfflinePlayerService : AbstractPlayerService() {
                 scope.launch(Dispatchers.IO) {
                     val watchHistoryItem =
                         downloadWithItems?.download?.toStreamItem()?.toWatchHistoryItem(videoId)
+                            ?.copy(
+                                languageCode = downloadWithItems?.downloadItems?.firstOrNull { it.type == FileType.AUDIO }?.language
+                            )
                     if (watchHistoryItem != null) {
                         DatabaseHelper.addToWatchHistory(watchHistoryItem)
                     }

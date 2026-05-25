@@ -2,14 +2,26 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="64dp"
     android:height="64dp"
-    android:tint="@color/splash_screen_icon_color"
     android:viewportWidth="1280"
     android:viewportHeight="1280">
+
+    <group
+        android:name="glowGroup"
+        android:scaleX="1.0"
+        android:scaleY="1.0"
+        android:pivotX="640"
+        android:pivotY="640">
+        <path
+            android:fillColor="#FF0000"
+            android:alpha="0.25"
+            android:pathData="M640,128C349.2,128 128,349.2 128,640s221.2,512 512,512s512,-221.2 512,-512S930.8,128 640,128zM640,1068c-236.4,0 -428,-191.6 -428,-428s191.6,-428 428,-428s428,191.6 428,428S876.4,1068 640,1068z"/>
+    </group>
 
     <group
         android:name="scaleGroup"
         android:scaleX="0.5"
         android:scaleY="0.5"
+        android:tint="@color/splash_screen_icon_color"
         android:pivotX="640"
         android:pivotY="640">
         <path

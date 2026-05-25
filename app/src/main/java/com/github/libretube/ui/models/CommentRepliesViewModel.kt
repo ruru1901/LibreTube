@@ -24,7 +24,7 @@ class CommentRepliesViewModel(
     private val videoId = savedStateHandle.get<String>(IntentData.videoId)!!
     private val comment = savedStateHandle.get<Comment>(IntentData.comment)!!
 
-    val commentRepliesLiveData = Pager(PagingConfig(20, enablePlaceholders = false)) {
+    val commentRepliesLiveData = Pager(PagingConfig(100, enablePlaceholders = false, prefetchDistance = 50)) {
         CommentRepliesPagingSource(videoId, comment)
     }
         .liveData

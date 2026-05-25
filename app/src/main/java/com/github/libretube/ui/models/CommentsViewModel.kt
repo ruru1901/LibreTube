@@ -22,7 +22,7 @@ class CommentsViewModel : ViewModel() {
     val videoIdLiveData = MutableLiveData<String>()
 
     val commentsLiveData = videoIdLiveData.switchMap {
-        Pager(PagingConfig(pageSize = 20, enablePlaceholders = false)) {
+        Pager(PagingConfig(pageSize = 100, enablePlaceholders = false, prefetchDistance = 50)) {
             CommentPagingSource(it) {
                 _commentCountLiveData.updateIfChanged(it)
             }

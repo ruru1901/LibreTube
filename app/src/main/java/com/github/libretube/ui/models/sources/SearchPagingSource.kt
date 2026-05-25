@@ -16,19 +16,32 @@ class SearchPagingSource(
 
     override suspend fun load(params: LoadParams<String>): LoadResult<String, ContentItem> {
         return try {
-            val result = withContext(Dispatchers.IO) {
-                params.key?.let {
-                    MediaServiceRepository.instance.getSearchResultsNextPage(
-                        searchQuery, searchFilter, it
-                    )
-                } ?: MediaServiceRepository.instance.getSearchResults(searchQuery, searchFilter)
-                    .also {
-                        if (it.suggestion.isNullOrEmpty()) onSearchSuggestion(null)
-                        else onSearchSuggestion(it.suggestion to it.corrected)
+            val allItems = mutableListOf<ContentItem>()
+            var nextPage: String? = params.key
+            var pagesFetched = 0
+            val maxPages = if (params.key == null) 5 else 1
+
+            while ((nextPage != null || params.key == null) && pagesFetched < maxPages) {
+                val result = withContext(Dispatchers.IO) {
+                    if (nextPage != null) {
+                        MediaServiceRepository.instance.getSearchResultsNextPage(
+                            searchQuery, searchFilter, nextPage
+                        )
+                    } else {
+                        MediaServiceRepository.instance.getSearchResults(searchQuery, searchFilter)
+                            .also {
+                                if (it.suggestion.isNullOrEmpty()) onSearchSuggestion(null)
+                                else onSearchSuggestion(it.suggestion to it.corrected)
+                            }
                     }
+                }
+                allItems.addAll(result.items)
+                nextPage = result.nextpage
+                pagesFetched++
+                if (result.nextpage == null || result.items.isEmpty()) break
             }
 
-            LoadResult.Page(result.items, null, result.nextpage)
+            LoadResult.Page(allItems, null, nextPage)
         } catch (e: Exception) {
             LoadResult.Error(e)
         }

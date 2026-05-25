@@ -16,7 +16,7 @@ object DatabaseHelper {
     private const val MAX_SEARCH_HISTORY_SIZE = 20
 
     // can only mark as watched if less than 60s remaining
-    private const val ABSOLUTE_WATCHED_THRESHOLD = 60.0f
+    private const val ABSOLUTE_WATCHED_THRESHOLD = 30.0f
 
     // can only mark as watched if at least 75% watched
     private const val RELATIVE_WATCHED_THRESHOLD = 0.75f

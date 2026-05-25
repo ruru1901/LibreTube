@@ -26,12 +26,6 @@
                 android:layout_height="wrap_content"
                 android:text="@string/youtube" />
 
-            <RadioButton
-                android:id="@+id/piped"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/piped" />
-
         </RadioGroup>
 
         <LinearLayout

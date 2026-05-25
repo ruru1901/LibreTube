@@ -68,7 +68,8 @@ data class StreamItem(
         uploaderUrl = uploaderUrl?.toID(),
         uploaderAvatar = uploaderAvatar?.let { ProxyHelper.unwrapUrl(it) },
         thumbnailUrl = thumbnail?.let { ProxyHelper.unwrapUrl(it) },
-        duration = duration
+        duration = duration,
+        channelId = uploaderUrl?.toID()
     )
 
     companion object {

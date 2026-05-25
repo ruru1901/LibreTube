@@ -44,10 +44,6 @@ class BackupDialog : DialogFragment() {
             it.subscriptions = Database.localSubscriptionDao().getAll()
         })
 
-        data object CustomInstances : BackupOption(R.string.backup_customInstances, onSelected = {
-            it.customInstances = Database.customInstanceDao().getAll()
-        })
-
         data object PlaylistBookmarks : BackupOption(R.string.bookmarks, onSelected = {
             it.playlistBookmarks = Database.playlistBookmarkDao().getAll()
         })
@@ -86,7 +82,6 @@ class BackupDialog : DialogFragment() {
             BackupOption.WatchPositions,
             BackupOption.SearchHistory,
             BackupOption.LocalSubscriptions,
-            BackupOption.CustomInstances,
             BackupOption.PlaylistBookmarks,
             BackupOption.LocalPlaylists,
             BackupOption.SubscriptionGroups,

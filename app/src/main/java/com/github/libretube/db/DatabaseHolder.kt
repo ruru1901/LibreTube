@@ -83,6 +83,50 @@ object DatabaseHolder {
         }
     }
 
+    private val MIGRATION_23_24 = object : Migration(23, 24) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("DROP TABLE IF EXISTS 'CustomInstance'")
+        }
+    }
+
+    private val MIGRATION_24_25 = object : Migration(24, 25) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'channelId' TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'categoryId' TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'tags' TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'watchPercent' REAL DEFAULT NULL")
+            db.execSQL("ALTER TABLE 'watchHistoryItem' ADD COLUMN 'languageCode' TEXT DEFAULT NULL")
+        }
+    }
+
+    private val MIGRATION_25_26 = object : Migration(25, 26) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS 'categoryFeedCache' (
+                    'cacheKey' TEXT PRIMARY KEY NOT NULL,
+                    'categoryId' TEXT NOT NULL,
+                    'languageCode' TEXT NOT NULL,
+                    'videoId' TEXT NOT NULL,
+                    'title' TEXT,
+                    'thumbnail' TEXT,
+                    'uploaderName' TEXT,
+                    'uploaderUrl' TEXT,
+                    'uploaderAvatar' TEXT,
+                    'duration' INTEGER,
+                    'views' INTEGER,
+                    'uploaded' INTEGER NOT NULL DEFAULT 0,
+                    'uploaderVerified' INTEGER NOT NULL DEFAULT 0,
+                    'shortDescription' TEXT,
+                    'isShort' INTEGER NOT NULL DEFAULT 0,
+                    'score' REAL NOT NULL DEFAULT 0.0,
+                    'fetchedAt' INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     val Database by lazy {
         Room.databaseBuilder(LibreTubeApp.instance, AppDatabase::class.java, DATABASE_NAME)
             .addMigrations(
@@ -94,6 +138,9 @@ object DatabaseHolder {
                 MIGRATION_17_18,
                 MIGRATION_21_22,
                 MIGRATION_22_23,
+                MIGRATION_23_24,
+                MIGRATION_24_25,
+                MIGRATION_25_26,
             )
             .build()
     }

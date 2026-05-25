@@ -31,7 +31,7 @@ class SearchResultViewModel(savedStateHandle: SavedStateHandle) : ViewModel() {
     @OptIn(ExperimentalCoroutinesApi::class)
     val searchResultsFlow = filterMutableData.flatMapLatest {
         Pager(
-            PagingConfig(pageSize = 20, enablePlaceholders = false),
+            PagingConfig(pageSize = 100, enablePlaceholders = false, prefetchDistance = 50),
             pagingSourceFactory = {
                 SearchPagingSource(searchQuery, it) { suggestion ->
                     searchSuggestion.postValue(suggestion)

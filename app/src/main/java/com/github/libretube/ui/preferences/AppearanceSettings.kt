@@ -12,7 +12,6 @@ import com.github.libretube.ui.base.BasePreferenceFragment
 import com.github.libretube.ui.dialogs.NavBarOptionsDialog
 import com.github.libretube.ui.dialogs.RequireRestartDialog
 import com.github.libretube.ui.sheets.IconsBottomSheet
-import com.google.android.material.color.DynamicColors
 
 class AppearanceSettings : BasePreferenceFragment() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -30,12 +29,6 @@ class AppearanceSettings : BasePreferenceFragment() {
             true
         }
 
-        val accentColor = findPreference<ListPreference>(PreferenceKeys.ACCENT_COLOR)
-        updateAccentColorValues(accentColor!!)
-        accentColor.setOnPreferenceChangeListener { _, _ ->
-            RequireRestartDialog().show(childFragmentManager, RequireRestartDialog::class.java.name)
-            true
-        }
 
         val changeIcon = findPreference<Preference>(PreferenceKeys.APP_ICON)
         val iconPref = PreferenceHelper.getString(
@@ -63,13 +56,4 @@ class AppearanceSettings : BasePreferenceFragment() {
         }
     }
 
-    /**
-     * Remove material you from accent color option if not available
-     */
-    private fun updateAccentColorValues(pref: ListPreference) {
-        if (!DynamicColors.isDynamicColorAvailable()) {
-            pref.entries = pref.entries.toList().subList(1, pref.entries.size).toTypedArray()
-            pref.entryValues = pref.entryValues.toList().subList(1, pref.entryValues.size).toTypedArray()
-        }
-    }
 }

@@ -30,8 +30,6 @@ object IntentData {
     const val appUpdateURL = "updateURL"
     const val backupFile = "backupFile"
     const val playlistTask = "playlistTask"
-    const val loginTask = "loginTask"
-    const val logoutTask = "logoutTask"
     const val color = "color"
     const val streamItem = "streamItem"
     const val url = "url"

@@ -8,10 +8,11 @@ import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.search.SearchExtractor
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
+import java.util.concurrent.ConcurrentHashMap
 
 class CategoryFeedRepository {
-    private val extractorCache = mutableMapOf<String, SearchExtractor>()
-    private val pageCursors = mutableMapOf<String, Page?>()
+    private val extractorCache = ConcurrentHashMap<String, SearchExtractor>()
+    private val pageCursors = ConcurrentHashMap<String, Page?>()
 
     suspend fun getSearchPage(query: String): List<StreamItem> = withContext(Dispatchers.IO) {
         val extractor = try {
@@ -36,6 +37,10 @@ class CategoryFeedRepository {
         }
 
         pageCursors[query] = resultPage.nextPage
+
+        if (resultPage.nextPage == null && currentCursor != null) {
+            extractorCache.remove(query)
+        }
 
         resultPage.items
             .filterIsInstance<StreamInfoItem>()
