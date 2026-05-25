@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.github.libretube.LibreTubeApp
 import com.github.libretube.api.MediaServiceRepository
 import com.github.libretube.api.PlaylistsHelper
 import com.github.libretube.api.SubscriptionHelper
@@ -15,16 +16,20 @@ import com.github.libretube.db.DatabaseHelper
 import com.github.libretube.db.DatabaseHolder
 import com.github.libretube.db.obj.PlaylistBookmark
 import com.github.libretube.extensions.runSafely
+import com.github.libretube.extensions.toID
 import com.github.libretube.extensions.updateIfChanged
 import com.github.libretube.helpers.PlayerHelper
 import com.github.libretube.helpers.PreferenceHelper
+import com.github.libretube.repo.CategoryFeedRepository
+import com.github.libretube.util.CategoryFeedManager
+import com.github.libretube.util.FeedScorer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.coroutineScope
 
 class HomeViewModel : ViewModel() {
     private val hideWatched
@@ -44,6 +49,16 @@ class HomeViewModel : ViewModel() {
     val bookmarks: MutableLiveData<List<PlaylistBookmark>> = MutableLiveData(null)
     val playlists: MutableLiveData<List<Playlists>> = MutableLiveData(null)
     val continueWatching: MutableLiveData<List<StreamItem>> = MutableLiveData(null)
+    private var continueWatchingLoaded = false
+
+    data class CategoryFeedData(
+        val categoryIds: List<String>,
+        val labels: List<String>,
+        val queries: List<String>,
+        val videos: List<List<StreamItem>>
+    )
+    val categoryFeeds: MutableLiveData<CategoryFeedData?> = MutableLiveData(null)
+
     val isLoading: MutableLiveData<Boolean> = MutableLiveData(true)
     val loadedSuccessfully: MutableLiveData<Boolean> = MutableLiveData(false)
 
@@ -51,34 +66,29 @@ class HomeViewModel : ViewModel() {
 
     private var loadHomeJob: Job? = null
 
+    private val categoryFeedRepository = CategoryFeedRepository()
+    private var lastPrefHash: Int? = null
+    private val seenVideoIds = mutableSetOf<String>()
+
     fun loadHomeFeed(
         context: Context,
         subscriptionsViewModel: SubscriptionsViewModel,
-        visibleItems: Set<String>,
-        onUnusualLoadTime: () -> Unit
+        visibleItems: Set<String>
     ) {
         isLoading.value = true
 
         loadHomeJob?.cancel()
         loadHomeJob = viewModelScope.launch {
-            val result = async {
-                awaitAll(
-                    async { if (visibleItems.contains(TRENDING)) loadTrending(context) },
-                    async { if (visibleItems.contains(FEATURED)) loadFeed(subscriptionsViewModel) },
-                    async { if (visibleItems.contains(BOOKMARKS)) loadBookmarks() },
-                    async { if (visibleItems.contains(PLAYLISTS)) loadPlaylists() },
-                    async { if (visibleItems.contains(WATCHING)) loadVideosToContinueWatching() }
-                )
-                loadedSuccessfully.value = sections.any { it.value != null }
-                isLoading.value = false
-            }
-
-            withContext(Dispatchers.IO) {
-                delay(UNUSUAL_LOAD_TIME_MS)
-                if (result.isActive) {
-                    onUnusualLoadTime.invoke()
-                }
-            }
+            awaitAll(
+                async { if (visibleItems.contains(TRENDING)) loadTrending(context) },
+                async { if (visibleItems.contains(FEATURED)) loadFeed(subscriptionsViewModel) },
+                async { if (visibleItems.contains(BOOKMARKS)) loadBookmarks() },
+                async { if (visibleItems.contains(PLAYLISTS)) loadPlaylists() },
+                async { if (visibleItems.contains(WATCHING) && !continueWatchingLoaded) loadVideosToContinueWatching() },
+                async { if (visibleItems.contains(PERSONALIZED)) loadPersonalizedCategories(context) }
+            )
+            loadedSuccessfully.value = sections.any { it.value != null } || categoryFeeds.value != null
+            isLoading.value = false
         }
     }
 
@@ -128,27 +138,106 @@ class HomeViewModel : ViewModel() {
     private suspend fun loadVideosToContinueWatching() {
         if (!PlayerHelper.watchHistoryEnabled) return
         runSafely(
-            onSuccess = { videos -> continueWatching.updateIfChanged(videos) },
+            onSuccess = { videos ->
+                continueWatching.updateIfChanged(videos)
+                continueWatchingLoaded = true
+            },
             ioBlock = ::loadWatchingFromDB
         )
     }
 
     private suspend fun loadWatchingFromDB(): List<StreamItem> {
         val videos = DatabaseHelper.getWatchHistoryPage(1, 20)
+        val streamItems = videos.map { it.toStreamItem() }
 
-        return DatabaseHelper
-            .filterUnwatched(videos.map { it.toStreamItem() })
+        // only include items that have a saved watch position
+        return streamItems.filter { item ->
+            val videoId = item.url?.toID() ?: return@filter false
+            val position = DatabaseHelper.getWatchPosition(videoId)
+            position != null && position > 0
+        }.let { filtered ->
+            DatabaseHelper.filterUnwatched(filtered)
+        }
     }
 
     private suspend fun tryLoadFeed(subscriptionsViewModel: SubscriptionsViewModel): List<StreamItem> {
-        // use cached feed if available, otherwise load feed from API/database
         val feed = subscriptionsViewModel.videoFeed.value ?: run {
             SubscriptionHelper.getFeed(forceRefresh = false).also {
                 subscriptionsViewModel.videoFeed.postValue(it)
             }
         }
 
-        return DatabaseHelper.filterByStreamTypeAndWatchPosition(feed, hideWatched, showUpcoming)
+        return FeedScorer.sortByRelevance(
+            DatabaseHelper.filterByStreamTypeAndWatchPosition(feed, hideWatched, showUpcoming),
+            LibreTubeApp.instance
+        )
+    }
+
+    private suspend fun loadPersonalizedCategories(context: Context) {
+        val rawCategories = PreferenceHelper.getString(PreferenceKeys.PREFERRED_CATEGORIES, "")
+            .split(",").map { it.trim() }.filter { it.isNotBlank() }
+        val rawLanguages = PreferenceHelper.getString(PreferenceKeys.PREFERRED_LANGUAGES, "")
+            .split(",").map { it.trim() }.filter { it.isNotBlank() }
+
+        val resolvedCategories = CategoryFeedManager.resolveCategoryIds(context, rawCategories)
+        val resolvedLanguages = CategoryFeedManager.resolveLanguageCodes(context, rawLanguages)
+
+        val categories = resolvedCategories.ifEmpty { listOf("gaming", "music", "education", "tech", "movies") }
+        val languages = resolvedLanguages.ifEmpty { listOf("en") }
+
+        val prefHash = (categories.toString() + languages.toString()).hashCode()
+        if (lastPrefHash != null && lastPrefHash != prefHash) {
+            categoryFeedRepository.reset()
+            seenVideoIds.clear()
+        }
+        lastPrefHash = prefHash
+
+        val queries = CategoryFeedManager.buildQueries(categories, languages)
+
+        val results = withContext(Dispatchers.IO) {
+            coroutineScope {
+                queries.map { queryDef ->
+                    async {
+                        val items = runCatching {
+                            categoryFeedRepository.getSearchPage(queryDef.query)
+                        }.getOrElse {
+                            emptyList()
+                        }
+
+                        val filtered = if (items.isNotEmpty()) {
+                            CategoryFeedManager.scoreAndFilter(items, context)
+                                .filter { it.url != null && it.url !in seenVideoIds }
+                                .take(20)
+                        } else {
+                            emptyList()
+                        }
+
+                        filtered.forEach { seenVideoIds.add(it.url ?: "") }
+
+                        queryDef to filtered
+                    }
+                }.awaitAll()
+            }
+        }
+
+        val nonEmpty = results.filter { it.second.isNotEmpty() }
+
+        if (nonEmpty.isNotEmpty()) {
+            val allVideos = nonEmpty.flatMap { it.second }
+            val uniqueByUrl = mutableSetOf<String>()
+            val dedupedResults = nonEmpty.map { (queryDef, videos) ->
+                queryDef to videos.filter { it.url != null && uniqueByUrl.add(it.url) }
+            }
+
+            categoryFeeds.postValue(
+                CategoryFeedData(
+                    categoryIds = dedupedResults.map { it.first.categoryId },
+                    labels = dedupedResults.map { CategoryFeedManager.getLabel(context, it.first.categoryId) },
+                    queries = dedupedResults.map { it.first.query },
+                    videos = dedupedResults.map { it.second }
+                )
+            )
+        }
     }
 
     companion object {
@@ -158,5 +247,6 @@ class HomeViewModel : ViewModel() {
         private const val TRENDING = "trending"
         private const val BOOKMARKS = "bookmarks"
         private const val PLAYLISTS = "playlists"
+        private const val PERSONALIZED = "personalized_categories"
     }
 }

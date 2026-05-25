@@ -1,37 +1,27 @@
 package com.github.libretube.ui.fragments
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.chip.Chip
+import com.github.libretube.NavDirections
 import com.github.libretube.R
-import com.github.libretube.api.MediaServiceRepository
-import com.github.libretube.api.TrendingCategory
-import com.github.libretube.api.obj.Playlists
-import com.github.libretube.api.obj.StreamItem
-import com.github.libretube.constants.PreferenceKeys
 import com.github.libretube.constants.PreferenceKeys.HOME_TAB_CONTENT
 import com.github.libretube.databinding.FragmentHomeBinding
-import com.github.libretube.db.obj.PlaylistBookmark
+import com.github.libretube.helpers.PlayerHelper
 import com.github.libretube.helpers.PreferenceHelper
-import com.github.libretube.ui.activities.SettingsActivity
-import com.github.libretube.ui.adapters.CarouselPlaylist
-import com.github.libretube.ui.adapters.CarouselPlaylistAdapter
+import com.github.libretube.ui.adapters.CategorySectionsAdapter
 import com.github.libretube.ui.adapters.VideoCardsAdapter
 import com.github.libretube.ui.models.HomeViewModel
 import com.github.libretube.ui.models.SubscriptionsViewModel
-import com.github.libretube.ui.models.TrendsViewModel
-import com.google.android.material.carousel.CarouselLayoutManager
-import com.google.android.material.carousel.CarouselSnapHelper
-import com.google.android.material.carousel.UncontainedCarouselStrategy
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.snackbar.Snackbar
-
 
 class HomeFragment : Fragment(R.layout.fragment_home) {
     private var _binding: FragmentHomeBinding? = null
@@ -39,136 +29,84 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
 
     private val homeViewModel: HomeViewModel by activityViewModels()
     private val subscriptionsViewModel: SubscriptionsViewModel by activityViewModels()
-    private val trendsViewModel: TrendsViewModel by activityViewModels()
 
-    private val trendingAdapter = VideoCardsAdapter()
-    private val feedAdapter = VideoCardsAdapter(columnWidthDp = 250f)
-    private val watchingAdapter = VideoCardsAdapter(columnWidthDp = 250f)
-    private val bookmarkAdapter = CarouselPlaylistAdapter()
-    private val playlistAdapter = CarouselPlaylistAdapter()
+    private val feedAdapter = VideoCardsAdapter()
+    private val categorySectionsAdapter = CategorySectionsAdapter(
+        onSeeAllClick = { query ->
+            try {
+                findNavController().navigate(NavDirections.showSearchResults(query))
+            } catch (_: Exception) {
+                // nav controller may not be available
+            }
+        },
+        onContinueWatchingSeeAll = null
+    )
+    private val defaultAdapter by lazy { ConcatAdapter(feedAdapter, categorySectionsAdapter) }
+    private val verticalFeedAdapter = VideoCardsAdapter()
+    private var categoryFeedData: HomeViewModel.CategoryFeedData? = null
+    private val categoryMruOrder = mutableListOf<String>()
+    private var isRebuildingChips = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         _binding = FragmentHomeBinding.bind(view)
         super.onViewCreated(view, savedInstanceState)
 
-        binding.bookmarksRV.layoutManager = CarouselLayoutManager(UncontainedCarouselStrategy())
-        binding.playlistsRV.layoutManager = CarouselLayoutManager(UncontainedCarouselStrategy())
-
-        val bookmarksSnapHelper = CarouselSnapHelper()
-        bookmarksSnapHelper.attachToRecyclerView(binding.bookmarksRV)
-
-        val playlistsSnapHelper = CarouselSnapHelper()
-        playlistsSnapHelper.attachToRecyclerView(binding.playlistsRV)
-
-        binding.trendingRV.adapter = trendingAdapter
-        binding.featuredRV.adapter = feedAdapter
-        binding.bookmarksRV.adapter = bookmarkAdapter
-        binding.playlistsRV.adapter = playlistAdapter
-        binding.playlistsRV.adapter?.registerAdapterDataObserver(object :
-            RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
-                super.onItemRangeRemoved(positionStart, itemCount)
-                if (itemCount == 0) {
-                    binding.playlistsRV.isGone = true
-                    binding.playlistsTV.isGone = true
-                }
-            }
-        })
-        binding.watchingRV.adapter = watchingAdapter
-
-        with(homeViewModel) {
-            trending.observe(viewLifecycleOwner, ::showTrending)
-            feed.observe(viewLifecycleOwner, ::showFeed)
-            bookmarks.observe(viewLifecycleOwner, ::showBookmarks)
-            playlists.observe(viewLifecycleOwner, ::showPlaylists)
-            continueWatching.observe(viewLifecycleOwner, ::showContinueWatching)
-            isLoading.observe(viewLifecycleOwner, ::updateLoading)
-        }
-
-        binding.featuredTV.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_subscriptionsFragment)
-        }
-
-        binding.watchingTV.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_watchHistoryFragment)
-        }
-
-        binding.trendingTV.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_trendsFragment)
-        }
-
-        binding.playlistsTV.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_libraryFragment)
-        }
-
-        binding.bookmarksTV.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_libraryFragment)
-        }
+        binding.feedRv.layoutManager = LinearLayoutManager(requireContext())
+        binding.feedRv.adapter = defaultAdapter
 
         binding.refresh.setOnRefreshListener {
             binding.refresh.isRefreshing = true
             fetchHomeFeed()
         }
 
-        binding.trendingRegion.setOnClickListener {
-            TrendsFragment.showChangeRegionDialog(requireContext()) {
-                fetchHomeFeed()
-            }
-        }
-
-        val trendingCategories = MediaServiceRepository.instance.getTrendingCategories()
-        binding.trendingCategory.isVisible = trendingCategories.size > 1
-        binding.trendingCategory.setOnClickListener {
-            val currentTrendingCategoryPref = PreferenceHelper.getString(
-                PreferenceKeys.TRENDING_CATEGORY,
-                TrendingCategory.LIVE.name
-            ).let { categoryName -> trendingCategories.first { it.name == categoryName } }
-
-            val categories = trendingCategories.map { category ->
-                category to getString(category.titleRes)
-            }
-
-            var selected = trendingCategories.indexOf(currentTrendingCategoryPref)
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.category)
-                .setSingleChoiceItems(
-                    categories.map { it.second }.toTypedArray(),
-                    selected
-                ) { _, checked ->
-                    selected = checked
-                }
-                .setNegativeButton(R.string.cancel, null)
-                .setPositiveButton(R.string.okay) { _, _ ->
-                    PreferenceHelper.putString(
-                        PreferenceKeys.TRENDING_CATEGORY,
-                        trendingCategories[selected].name
-                    )
-                    fetchHomeFeed()
-                }
-                .show()
-        }
-
         binding.refreshButton.setOnClickListener {
             fetchHomeFeed()
         }
 
-        binding.changeInstance.setOnClickListener {
-            redirectToIntentSettings()
+        with(homeViewModel) {
+            feed.observe(viewLifecycleOwner, ::showFeed)
+            categoryFeeds.observe(viewLifecycleOwner) { data ->
+                if (data != null) {
+                    categoryFeedData = data
+                    categorySectionsAdapter.submitSections(
+                        data.categoryIds,
+                        data.labels,
+                        data.queries,
+                        data.videos
+                    )
+                    loadMruOrder()
+                    buildCategoryChips(data.labels)
+                }
+            }
+            isLoading.observe(viewLifecycleOwner, ::updateLoading)
+        }
+
+        binding.categoryChipGroup.setOnCheckedStateChangeListener { group: com.google.android.material.chip.ChipGroup, checkedIds: MutableList<Int> ->
+            val chipId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
+            val chip = group.findViewById<com.google.android.material.chip.Chip>(chipId)
+            updateFeedForCategory(chip.text.toString())
+        }
+
+        if (!PlayerHelper.watchHistoryEnabled) {
+            binding.continueWatchingChip.isGone = true
+        }
+
+        homeViewModel.continueWatching.observe(viewLifecycleOwner) { videos ->
+            if (!videos.isNullOrEmpty()) {
+                categorySectionsAdapter.setContinueWatchingSection(
+                    videos,
+                    getString(R.string.continue_watching)
+                )
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
-
-        // Avoid re-fetching when re-entering the screen if it was loaded successfully, except when
-        // the value of trending region has changed
-        val isTrendingRegionChanged = homeViewModel.trending.value?.let {
-            it.second.region != PreferenceHelper.getTrendingRegion(requireContext())
-        } == true
-
-        if (homeViewModel.loadedSuccessfully.value == false || isTrendingRegionChanged) {
+        if (homeViewModel.loadedSuccessfully.value == false) {
             fetchHomeFeed()
         }
+        binding.chipAll.isChecked = true
     }
 
     override fun onDestroyView() {
@@ -184,67 +122,181 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         homeViewModel.loadHomeFeed(
             context = requireContext(),
             subscriptionsViewModel = subscriptionsViewModel,
-            visibleItems = visibleItems,
-            onUnusualLoadTime = ::showChangeInstanceSnackBar
+            visibleItems = visibleItems
         )
     }
 
-    private fun showTrending(trends: Pair<TrendingCategory, TrendsViewModel.TrendingStreams>?) {
-        if (trends == null) return
-        val (category, trendingStreams) = trends
-
-        // cache the loaded trends in the [TrendsViewModel] so that the trends don't need to be
-        // reloaded there
-        val region = PreferenceHelper.getTrendingRegion(requireContext())
-        trendsViewModel.setStreamsForCategory(
-            category,
-            TrendsViewModel.TrendingStreams(region, trendingStreams.streams)
-        )
-
-        makeVisible(binding.trendingRV, binding.trendingTV)
-        trendingAdapter.submitList(trendingStreams.streams.take(10))
-    }
-
-    private fun showFeed(streamItems: List<StreamItem>?) {
+    private fun showFeed(streamItems: List<com.github.libretube.api.obj.StreamItem>?) {
         if (streamItems == null) return
-
-        makeVisible(binding.featuredRV, binding.featuredTV)
-        val feedVideos = streamItems.take(20)
-
-        feedAdapter.submitList(feedVideos)
+        binding.feedRv.isVisible = true
+        feedAdapter.submitList(streamItems)
     }
 
-    private fun showBookmarks(bookmarks: List<PlaylistBookmark>?) {
-        if (bookmarks == null) return
+    private fun updateFeedForCategory(label: String) {
+        val context = requireContext()
+        val allLabel = context.getString(R.string.all)
+        val staticLabels = setOf(
+            allLabel,
+            context.getString(R.string.subscriptions),
+            context.getString(R.string.continue_watching)
+        )
+        if (label !in staticLabels && !isRebuildingChips) {
+            categoryMruOrder.remove(label)
+            categoryMruOrder.add(0, label)
+            saveMruOrder()
+            rebuildCategoryChipsOrder()
+        }
+        if (label == context.getString(R.string.subscriptions)) {
+            findNavController().navigate(R.id.action_homeFragment_to_subscriptionsFragment)
+            return
+        }
+        if (label == allLabel || categoryFeedData == null) {
+            binding.feedRv.layoutManager = LinearLayoutManager(context)
+            binding.feedRv.adapter = defaultAdapter
+            return
+        }
+        val data = categoryFeedData!!
+        val idx = data.labels.indexOfFirst { it.equals(label, ignoreCase = true) }
+        if (idx < 0) {
+            binding.feedRv.layoutManager = LinearLayoutManager(context)
+            binding.feedRv.adapter = defaultAdapter
+            return
+        }
+        verticalFeedAdapter.submitList(data.videos[idx])
+        binding.feedRv.layoutManager = LinearLayoutManager(context)
+        binding.feedRv.adapter = verticalFeedAdapter
+    }
 
-        makeVisible(binding.bookmarksTV, binding.bookmarksRV)
-        bookmarkAdapter.submitList(bookmarks.map { bookmark ->
-            CarouselPlaylist(
-                id = bookmark.playlistId,
-                title = bookmark.playlistName,
-                thumbnail = bookmark.thumbnailUrl
+    private fun loadMruOrder() {
+        val raw = PreferenceHelper.getString("category_mru_order", "")
+        if (raw.isBlank()) return
+        categoryMruOrder.clear()
+        categoryMruOrder.addAll(raw.split(","))
+    }
+
+    private fun saveMruOrder() {
+        val raw = categoryMruOrder.joinToString(",")
+        PreferenceHelper.putString("category_mru_order", raw)
+    }
+
+    private fun buildCategoryChips(labels: List<String>) {
+        if (isRebuildingChips) return
+        isRebuildingChips = true
+        val chipGroup = binding.categoryChipGroup
+        val context = requireContext()
+        val staticLabels = setOf(
+            context.getString(R.string.all),
+            context.getString(R.string.subscriptions),
+            context.getString(R.string.continue_watching)
+        )
+
+        val oldDynamic = (0 until chipGroup.childCount)
+            .map { chipGroup.getChildAt(it) }
+            .filterIsInstance<Chip>()
+            .filter { it.text.toString() !in staticLabels }
+        oldDynamic.forEach { chipGroup.removeView(it) }
+
+        val sortedLabels = labels.sortedWith(
+            compareBy<String> { label ->
+                val idx = categoryMruOrder.indexOf(label)
+                if (idx >= 0) idx else Int.MAX_VALUE
+            }.thenBy { it }
+        )
+
+        val subscriptionsIndex = (0 until chipGroup.childCount)
+            .firstOrNull {
+                val child = chipGroup.getChildAt(it)
+                child is Chip && child.text.toString() == context.getString(R.string.subscriptions)
+            } ?: chipGroup.childCount
+
+        var insertIndex = subscriptionsIndex
+        for (label in sortedLabels) {
+            val chip = createCategoryChip(context, label)
+            chipGroup.addView(chip, insertIndex)
+            insertIndex++
+        }
+        isRebuildingChips = false
+    }
+
+    private fun rebuildCategoryChipsOrder() {
+        if (isRebuildingChips) return
+        isRebuildingChips = true
+        val chipGroup = binding.categoryChipGroup
+        val context = requireContext()
+        val staticLabels = setOf(
+            context.getString(R.string.all),
+            context.getString(R.string.subscriptions),
+            context.getString(R.string.continue_watching)
+        )
+
+        val dynamicChips = (0 until chipGroup.childCount)
+            .map { chipGroup.getChildAt(it) }
+            .filterIsInstance<Chip>()
+            .filter { it.text.toString() !in staticLabels }
+
+        if (dynamicChips.isEmpty()) return
+
+        val sorted = dynamicChips.sortedWith(
+            compareBy<Chip> { chip ->
+                val idx = categoryMruOrder.indexOf(chip.text.toString())
+                if (idx >= 0) idx else Int.MAX_VALUE
+            }.thenBy { it.text.toString() }
+        )
+
+        if (sorted.map { it.text.toString() } == dynamicChips.map { it.text.toString() }) return
+
+        val selectedText = dynamicChips.firstOrNull { it.isChecked }?.text?.toString()
+
+        dynamicChips.forEach { chipGroup.removeView(it) }
+
+        val subscriptionsIndex = (0 until chipGroup.childCount)
+            .firstOrNull {
+                val child = chipGroup.getChildAt(it)
+                child is Chip && child.text.toString() == context.getString(R.string.subscriptions)
+            } ?: chipGroup.childCount
+
+        var insertIndex = subscriptionsIndex
+        for (chip in sorted) {
+            chipGroup.addView(chip, insertIndex)
+            insertIndex++
+        }
+
+        if (selectedText != null) {
+            for (i in subscriptionsIndex until chipGroup.childCount) {
+                val child = chipGroup.getChildAt(i)
+                if (child is Chip && child.text.toString() == selectedText) {
+                    child.isChecked = true
+                    break
+                }
+            }
+        }
+        isRebuildingChips = false
+    }
+
+    private fun createCategoryChip(context: android.content.Context, label: String): Chip {
+        val styled = android.view.ContextThemeWrapper(context, com.google.android.material.R.style.Widget_Material3_Chip_Filter)
+        return Chip(styled).apply {
+            text = label
+            isCheckable = true
+            isClickable = true
+            setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(
+                ResourcesCompat.getColorStateList(
+                    context.resources,
+                    R.color.chip_text_selector,
+                    context.theme
+                )
             )
-        })
-    }
-
-    private fun showPlaylists(playlists: List<Playlists>?) {
-        if (playlists == null) return
-
-        makeVisible(binding.playlistsRV, binding.playlistsTV)
-        playlistAdapter.submitList(playlists.map { playlist ->
-            CarouselPlaylist(
-                id = playlist.id!!,
-                thumbnail = playlist.thumbnail,
-                title = playlist.name
+            setChipBackgroundColorResource(R.color.chip_bg_selector)
+            setChipStrokeColorResource(R.color.chip_stroke_selector)
+            chipStrokeWidth = 1f
+            chipCornerRadius = 14f
+            val heightPx = (48f * context.resources.displayMetrics.density).toInt()
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                heightPx
             )
-        })
-    }
-
-    private fun showContinueWatching(unwatchedVideos: List<StreamItem>?) {
-        if (unwatchedVideos == null) return
-
-        makeVisible(binding.watchingRV, binding.watchingTV)
-        watchingAdapter.submitList(unwatchedVideos)
+        }
     }
 
     private fun updateLoading(isLoading: Boolean) {
@@ -258,52 +310,26 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private fun showLoading() {
         binding.progress.isVisible = !binding.refresh.isRefreshing
         binding.nothingHere.isVisible = false
-        binding.scroll.alpha = 0.3f
     }
 
     private fun hideLoading() {
         binding.progress.isVisible = false
         binding.refresh.isRefreshing = false
 
-        val hasContent = homeViewModel.loadedSuccessfully.value == true
-        if (hasContent) {
+        if (homeViewModel.loadedSuccessfully.value == true) {
             showContent()
         } else {
             showNothingHere()
         }
-        binding.scroll.alpha = 1.0f
     }
 
     private fun showNothingHere() {
         binding.nothingHere.isVisible = true
-        binding.scroll.isVisible = false
+        binding.feedRv.isVisible = false
     }
 
     private fun showContent() {
         binding.nothingHere.isVisible = false
-        binding.scroll.isVisible = true
-    }
-
-    private fun showChangeInstanceSnackBar() {
-        val root = _binding?.root ?: return
-        Snackbar
-            .make(root, R.string.suggest_change_instance, Snackbar.LENGTH_LONG)
-            .apply {
-                setAction(R.string.change) {
-                    redirectToIntentSettings()
-                }
-                show()
-            }
-    }
-
-    private fun redirectToIntentSettings() {
-        val settingsIntent = Intent(context, SettingsActivity::class.java).apply {
-            putExtra(SettingsActivity.REDIRECT_KEY, SettingsActivity.REDIRECT_TO_INTENT_SETTINGS)
-        }
-        startActivity(settingsIntent)
-    }
-
-    private fun makeVisible(vararg views: View) {
-        views.forEach { it.isVisible = true }
+        binding.feedRv.isVisible = true
     }
 }
