@@ -26,10 +26,13 @@ class CategoryFeedRepository {
         }
 
         val currentCursor = pageCursors[query]
-        val resultPage = if (currentCursor == null) {
-            extractor.initialPage
-        } else {
-            extractor.getPage(currentCursor)
+        val resultPage = try {
+            if (currentCursor == null) extractor.initialPage
+            else extractor.getPage(currentCursor)
+        } catch (e: Exception) {
+            extractorCache.remove(query)
+            pageCursors.remove(query)
+            throw e
         }
 
         pageCursors[query] = resultPage.nextPage
