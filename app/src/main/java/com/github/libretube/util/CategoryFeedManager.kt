@@ -91,7 +91,7 @@ object CategoryFeedManager {
             val def = definitions[cat] ?: return@flatMap emptyList()
             langs.mapNotNull { lang ->
                 val suffix = languageSearchTerms[lang] ?: return@mapNotNull null
-                val keyword = def.keywords.first()
+                val keyword = def.keywords.firstOrNull() ?: return@mapNotNull null
                 val query = if (suffix.isNotEmpty()) "$keyword $suffix" else keyword
                 QueryDef(cat, lang, query)
             }
@@ -111,7 +111,7 @@ object CategoryFeedManager {
         val seenIds = mutableSetOf<String>()
         items
             .filter { !it.isShort }
-            .filter { it.duration == null || it.duration <= 0L || it.duration > 60L }
+            .filter { it.duration == null || it.duration > 60L }
             .filter { it.uploaded > 0L }
             .filter { it.url != null && seenIds.add(it.url) }
             .filter { it.url !in watchedIds }

@@ -41,13 +41,13 @@
 
     </style>
 
-    <!-- YouTube-style light theme -->
+    <!-- YouTube-style light theme (black accents) -->
     <style name="YouTubeLightTheme" parent="Theme.Material3.Light.NoActionBar">
 
-        <item name="colorPrimary">@color/youtube_red</item>
+        <item name="colorPrimary">@color/accent_light</item>
         <item name="colorOnPrimary">@color/youtube_white</item>
-        <item name="colorPrimaryContainer">#FFE0E0</item>
-        <item name="colorOnPrimaryContainer">#8B0000</item>
+        <item name="colorPrimaryContainer">#E8E8E8</item>
+        <item name="colorOnPrimaryContainer">@color/accent_light</item>
         <item name="colorSecondary">#606060</item>
         <item name="colorOnSecondary">@color/youtube_white</item>
         <item name="colorSecondaryContainer">#E5E5E5</item>
@@ -63,6 +63,7 @@
         <item name="android:navigationBarColor">@color/youtube_white</item>
         <item name="android:windowLightNavigationBar">true</item>
         <item name="android:colorBackground">@color/youtube_white</item>
+        <item name="android:windowBackground">@drawable/noise_overlay</item>
 
         <item name="textAppearanceTitleLarge">@style/YTTextAppearanceTitleLarge</item>
         <item name="textAppearanceBodyLarge">@style/YTTextAppearanceBodyLarge</item>
@@ -78,14 +79,14 @@
         <item name="materialAlertDialogTheme">@style/AlertDialogTheme</item>
     </style>
 
-    <!-- LibreTube Red dark theme -->
+    <!-- LibreTube dark theme (warm white accents) -->
     <style name="LibreTubeRedDarkTheme" parent="Theme.Material3.Dark.NoActionBar">
 
-        <item name="colorPrimary">@color/youtube_red</item>
-        <item name="colorOnPrimary">@color/youtube_white</item>
-        <item name="colorPrimaryContainer">#8B0000</item>
-        <item name="colorOnPrimaryContainer">#FFE0E0</item>
-        <item name="colorSecondary">#AAAAAA</item>
+        <item name="colorPrimary">@color/accent_dark</item>
+        <item name="colorOnPrimary">@color/youtube_dark_surface</item>
+        <item name="colorPrimaryContainer">#2A2A2A</item>
+        <item name="colorOnPrimaryContainer">@color/accent_dark</item>
+        <item name="colorSecondary">#E0E0E0</item>
         <item name="colorOnSecondary">@color/youtube_dark_surface</item>
         <item name="colorSecondaryContainer">#333333</item>
         <item name="colorOnSecondaryContainer">#E5E5E5</item>
@@ -100,6 +101,7 @@
         <item name="android:navigationBarColor">@color/youtube_dark_surface</item>
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:colorBackground">@color/youtube_dark_surface</item>
+        <item name="android:windowBackground">@drawable/noise_overlay</item>
 
         <item name="textAppearanceTitleLarge">@style/YTTextAppearanceTitleLarge</item>
         <item name="textAppearanceBodyLarge">@style/YTTextAppearanceBodyLarge</item>

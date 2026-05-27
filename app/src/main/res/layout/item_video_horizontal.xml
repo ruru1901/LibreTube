@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurface"
+    android:stateListAnimator="@animator/scale_on_press">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/thumbnail_container"
@@ -29,8 +30,8 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="4dp"
             android:layout_marginBottom="4dp"
-            app:cardBackgroundColor="#CC000000"
-            app:cardCornerRadius="4dp"
+            app:cardBackgroundColor="#BF000000"
+            app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -39,10 +40,8 @@
                 android:id="@+id/thumbnail_duration"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingStart="4dp"
-                android:paddingEnd="4dp"
-                android:paddingTop="2dp"
-                android:paddingBottom="2dp"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="4dp"
                 android:textAppearance="?attr/textAppearanceLabelSmall"
                 android:textColor="#FFFFFF"
                 tools:text="05:36" />
@@ -68,21 +67,40 @@
         app:layout_constraintTop_toBottomOf="@id/thumbnail_container"
         tools:text="Video title that wraps to two lines" />
 
-    <TextView
-        android:id="@+id/channel_name"
+    <LinearLayout
+        android:id="@+id/channel_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:maxLines="1"
+        android:orientation="horizontal"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingBottom="8dp"
-        android:textAlignment="viewStart"
-        android:textAppearance="?attr/textAppearanceLabelSmall"
-        android:textColor="?attr/colorOnSurfaceVariant"
+        android:gravity="center_vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/video_title"
-        tools:text="Channel Name" />
+        app:layout_constraintTop_toBottomOf="@id/video_title">
+
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/channel_avatar"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="4dp"
+            android:scaleType="centerCrop"
+            app:shapeAppearanceOverlay="@style/CircleImageView"
+            tools:src="@tools:sample/avatars" />
+
+        <TextView
+            android:id="@+id/channel_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textAlignment="viewStart"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            tools:text="Channel Name" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -31,6 +31,7 @@ class CategorySectionsAdapter(
     private sealed class Item {
         data class Header(val section: SectionData) : Item()
         data class Row(val section: SectionData) : Item()
+        data object Divider : Item()
     }
 
     private var flatItems: List<Item> = emptyList()
@@ -44,7 +45,7 @@ class CategorySectionsAdapter(
         )
         val sectionsWithoutCW = sections.filter { it.categoryId != "continue_watching" }
         sections = listOf(cwSection) + sectionsWithoutCW
-        flatItems = sections.flatMap { listOf(Item.Header(it), Item.Row(it)) }
+        flatItems = sections.flatMap { listOf(Item.Header(it), Item.Row(it), Item.Divider) }
         notifyDataSetChanged()
     }
 
@@ -57,7 +58,7 @@ class CategorySectionsAdapter(
         sections = categoryIdList.mapIndexed { index, id ->
             SectionData(id, labelList[index], queryList[index], videosList[index])
         }
-        flatItems = sections.flatMap { listOf(Item.Header(it), Item.Row(it)) }
+        flatItems = sections.flatMap { listOf(Item.Header(it), Item.Row(it), Item.Divider) }
         notifyDataSetChanged()
     }
 
@@ -67,6 +68,7 @@ class CategorySectionsAdapter(
         return when (flatItems[position]) {
             is Item.Header -> TYPE_HEADER
             is Item.Row -> TYPE_ROW
+            is Item.Divider -> TYPE_DIVIDER
         }
     }
 
@@ -81,6 +83,10 @@ class CategorySectionsAdapter(
                 val view = inflater.inflate(R.layout.item_category_video_row, parent, false)
                 RowViewHolder(view)
             }
+            TYPE_DIVIDER -> {
+                val view = inflater.inflate(R.layout.item_section_divider, parent, false)
+                DividerViewHolder(view)
+            }
             else -> throw IllegalArgumentException("Unknown view type: $viewType")
         }
     }
@@ -89,6 +95,7 @@ class CategorySectionsAdapter(
         when (val item = flatItems[position]) {
             is Item.Header -> (holder as HeaderViewHolder).bind(item.section)
             is Item.Row -> (holder as RowViewHolder).bind(item.section)
+            is Item.Divider -> {} // no-op
         }
     }
 
@@ -107,6 +114,8 @@ class CategorySectionsAdapter(
             }
         }
     }
+
+    inner class DividerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
 
     inner class RowViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val recyclerView: RecyclerView = itemView.findViewById(R.id.category_row_rv)
@@ -135,5 +144,6 @@ class CategorySectionsAdapter(
     companion object {
         private const val TYPE_HEADER = 0
         private const val TYPE_ROW = 1
+        private const val TYPE_DIVIDER = 2
     }
 }

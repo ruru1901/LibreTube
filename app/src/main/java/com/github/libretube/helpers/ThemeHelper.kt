@@ -6,7 +6,11 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Color
+import android.text.Spannable
+import android.text.SpannableString
 import android.text.Spanned
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.text.HtmlCompat
@@ -88,10 +92,8 @@ object ThemeHelper {
      * Get the styled app name
      */
     fun getStyledAppName(context: Context): Spanned {
-        val colorPrimary = getThemeColor(context, androidx.appcompat.R.attr.colorPrimaryDark)
-        val hexColor = "#%06X".format(0xFFFFFF and colorPrimary)
-        return "Libre<span  style='color:$hexColor';>Tube</span>"
-            .parseAsHtml(HtmlCompat.FROM_HTML_MODE_COMPACT)
+        val html = "<span style='color:#FFFFFF';>Libre</span><span style='color:#909090';>Tube</span>"
+        return html.parseAsHtml(HtmlCompat.FROM_HTML_MODE_COMPACT)
     }
 
     fun isDarkMode(context: Context): Boolean {

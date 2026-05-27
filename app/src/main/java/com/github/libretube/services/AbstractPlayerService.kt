@@ -82,6 +82,9 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
      */
     protected var shouldHandleAutoplay = true
 
+    private var retryCount = 0
+    private val maxRetries = 5
+
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             super.onIsPlayingChanged(isPlaying)
@@ -95,8 +98,23 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            // show a toast on errors
-            toastFromMainThread(error.localizedMessage.orEmpty())
+            // retry with backoff
+            if (retryCount >= maxRetries) {
+                toastFromMainThread(error.localizedMessage.orEmpty())
+                return
+            }
+            val delayMs = (1000L shl retryCount).coerceAtMost(30000L)
+            retryCount++
+            handler.postDelayed({
+                try {
+                    exoPlayer?.stop()
+                    exoPlayer?.seekTo(0)
+                    exoPlayer?.prepare()
+                    exoPlayer?.play()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }, delayMs)
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -109,6 +127,7 @@ abstract class AbstractPlayerService : MediaLibraryService(), MediaLibrarySessio
 
                 Player.STATE_READY -> {
                     isTransitioning = false
+                    retryCount = 0
                 }
             }
         }

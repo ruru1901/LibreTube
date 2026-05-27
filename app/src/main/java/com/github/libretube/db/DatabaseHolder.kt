@@ -99,6 +99,19 @@ object DatabaseHolder {
         }
     }
 
+    private val MIGRATION_26_27 = object : Migration(26, 27) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS 'seenVideo' (
+                    'videoId' TEXT PRIMARY KEY NOT NULL,
+                    'seenAt' INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+        }
+    }
+
     private val MIGRATION_25_26 = object : Migration(25, 26) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -141,6 +154,7 @@ object DatabaseHolder {
                 MIGRATION_23_24,
                 MIGRATION_24_25,
                 MIGRATION_25_26,
+                MIGRATION_26_27,
             )
             .build()
     }

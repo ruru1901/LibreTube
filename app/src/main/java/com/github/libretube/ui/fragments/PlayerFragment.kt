@@ -21,6 +21,7 @@ import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams
+import android.animation.ValueAnimator
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import androidx.activity.BackEventCompat
@@ -224,6 +225,7 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
     }
 
     private var bufferingTimeoutTask: Runnable? = null
+    private var skeletonAnim: ValueAnimator? = null
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -298,15 +300,13 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
         override fun onPlayerError(error: PlaybackException) {
             super.onPlayerError(error)
             if (retryCount >= maxRetries) return
-            // don't retry if no media loaded
-            if (playerController.mediaItemCount == 0) return
             val delayMs = (1000L shl retryCount).coerceAtMost(30000L)
             retryCount++
             retryTask = Runnable {
                 try {
-                    if (playerController.playbackState == Player.STATE_IDLE) {
-                        playerController.prepare()
-                    }
+                    playerController.stop()
+                    playerController.seekTo(0)
+                    playerController.prepare()
                     playerController.play()
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -1150,24 +1150,42 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
     }
 
     private fun startSkeletonAnimation() {
-        val pulse = AlphaAnimation(0.3f, 0.7f).apply {
+        val shimmerBase = ContextCompat.getDrawable(requireContext(), R.drawable.shimmer_skeleton)!!
+        val skeletonViews = listOf(
+            binding.skeletonDescription,
+            binding.skeletonChannel,
+            playerBackgroundBinding.skeletonVideoOverlay
+        )
+        skeletonViews.forEach { it.background = shimmerBase.mutate() }
+
+        val anim = ValueAnimator.ofInt(0, 10000).apply {
             duration = 800
-            repeatMode = Animation.REVERSE
-            repeatCount = Animation.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { valueAnimator ->
+                val level = valueAnimator.animatedValue as Int
+                skeletonViews.forEach { view ->
+                    val bg = view.background as? android.graphics.drawable.LayerDrawable
+                    bg?.getDrawable(1)?.level = level
+                }
+            }
+            start()
         }
-        binding.skeletonDescription.animation = pulse
-        binding.skeletonChannel.animation = pulse
-        playerBackgroundBinding.skeletonVideoOverlay.animation = AlphaAnimation(0.3f, 0.7f).apply {
-            duration = 800
-            repeatMode = Animation.REVERSE
-            repeatCount = Animation.INFINITE
-        }
+        skeletonAnim = anim
     }
 
     private fun stopSkeletonAnimation() {
-        binding.skeletonDescription.clearAnimation()
-        binding.skeletonChannel.clearAnimation()
-        playerBackgroundBinding.skeletonVideoOverlay.clearAnimation()
+        skeletonAnim?.cancel()
+        skeletonAnim = null
+        val skeletonViews = listOf(
+            binding.skeletonDescription,
+            binding.skeletonChannel,
+            playerBackgroundBinding.skeletonVideoOverlay
+        )
+        skeletonViews.forEach {
+            it.background = ContextCompat.getDrawable(requireContext(), R.drawable.skeleton_rect)
+        }
     }
 
     private fun connectToPlayerView() {
@@ -1219,6 +1237,9 @@ class PlayerFragment : Fragment(R.layout.fragment_player), CustomPlayerCallback 
                 streams.uploaderSubscriberCount.formatShort()
             )
             playerChannelSubCount.isVisible = streams.uploaderSubscriberCount >= 0
+
+            playerChannelNameMini.text = streams.uploader
+            playerChannelNameMini.isVisible = streams.uploader != null
 
             relPlayerDownload.isVisible = !streams.isLive && !isOffline
         }

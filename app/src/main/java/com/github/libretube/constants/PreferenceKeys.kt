@@ -95,7 +95,6 @@ object PreferenceKeys {
     const val LAST_LOCAL_FEED_REFRESH_TIMESTAMP_MILLIS = "last_feed_refresh_timestamp_millis"
 
     // Advanced
-    const val AUTOMATIC_UPDATE_CHECKS = "automatic_update_checks"
     const val DATA_SAVER_MODE = "data_saver_mode_key"
     const val MAX_IMAGE_CACHE = "image_cache_size"
     const val RESET_SETTINGS = "reset_settings"
@@ -128,6 +127,10 @@ object PreferenceKeys {
     // use the helper methods at PreferenceHelper to access these
     const val LAST_USER_SEEN_FEED_TIME = "last_watched_feed_time"
     const val LAST_REFRESHED_FEED_TIME = "last_refreshed_feed_time"
+
+    // Custom Background
+    const val CUSTOM_BACKGROUND_ENABLED = "custom_bg_enabled"
+    const val CUSTOM_BACKGROUND_PATH = "custom_bg_path"
 
     // Onboarding & Content Preferences
     const val ONBOARDING_COMPLETE = "onboarding_complete"

@@ -122,7 +122,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         homeViewModel.loadHomeFeed(
             context = requireContext(),
             subscriptionsViewModel = subscriptionsViewModel,
-            visibleItems = visibleItems
+            visibleItems = visibleItems,
+            forceRefresh = true
         )
     }
 

@@ -581,4 +581,10 @@
     <string name="content_preferences_dialog_title">Content Preferences</string>
     <string name="personalized_categories">Personalized categories</string>
     <string name="see_all">See all</string>
+    <string name="custom_background">Custom Background</string>
+    <string name="custom_background_summary">Set a custom image as the app background</string>
+    <string name="choose_background">Choose Image</string>
+    <string name="remove_background">Remove Background</string>
+    <string name="background_removed">Background image removed</string>
+    <string name="background_set">Background image set</string>
 </resources>

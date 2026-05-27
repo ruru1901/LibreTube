@@ -10,6 +10,7 @@ import com.github.libretube.db.dao.LocalPlaylistsDao
 import com.github.libretube.db.dao.LocalSubscriptionDao
 import com.github.libretube.db.dao.PlaylistBookmarkDao
 import com.github.libretube.db.dao.SearchHistoryDao
+import com.github.libretube.db.dao.SeenVideoDao
 import com.github.libretube.db.dao.SubscriptionGroupsDao
 import com.github.libretube.db.dao.SubscriptionsFeedDao
 import com.github.libretube.db.dao.WatchHistoryDao
@@ -26,6 +27,7 @@ import com.github.libretube.db.obj.LocalPlaylistItem
 import com.github.libretube.db.obj.LocalSubscription
 import com.github.libretube.db.obj.PlaylistBookmark
 import com.github.libretube.db.obj.SearchHistoryItem
+import com.github.libretube.db.obj.SeenVideo
 import com.github.libretube.db.obj.SubscriptionGroup
 import com.github.libretube.db.obj.SubscriptionsFeedItem
 import com.github.libretube.db.obj.WatchHistoryItem
@@ -48,9 +50,10 @@ import com.github.libretube.db.obj.WatchPosition
         DownloadPlaylistVideosCrossRef::class,
         SubscriptionGroup::class,
         SubscriptionsFeedItem::class,
-        CachedCategoryFeedItem::class
+        CachedCategoryFeedItem::class,
+        SeenVideo::class
     ],
-    version = 26,
+    version = 27,
     autoMigrations = [
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
@@ -113,4 +116,6 @@ abstract class AppDatabase : RoomDatabase() {
      * Locally cached personalized category feed
      */
     abstract fun categoryFeedDao(): CategoryFeedDao
+
+    abstract fun seenVideoDao(): SeenVideoDao
 }

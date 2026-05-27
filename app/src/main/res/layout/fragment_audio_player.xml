@@ -106,11 +106,19 @@
 
             </LinearLayout>
 
-            <com.google.android.material.loadingindicator.LoadingIndicator
+            <FrameLayout
                 android:id="@+id/progress"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center" />
+                android:layout_gravity="center">
+
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/breathing_logo" />
+
+            </FrameLayout>
 
         </FrameLayout>
 

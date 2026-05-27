@@ -15,19 +15,4 @@
         android:title="@string/settings"
         app:showAsAction="never" />
 
-    <item
-        android:id="@+id/action_help"
-        android:title="@string/help"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_donate"
-        android:title="@string/donate"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_about"
-        android:title="@string/about"
-        app:showAsAction="never" />
-
 </menu>

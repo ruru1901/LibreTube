@@ -26,6 +26,23 @@
             app:key="icon_change"
             app:title="@string/app_icon" />
 
+        <SwitchPreferenceCompat
+            android:icon="@drawable/ic_image"
+            app:defaultValue="false"
+            app:key="custom_bg_enabled"
+            app:title="@string/custom_background"
+            app:summary="@string/custom_background_summary" />
+
+        <Preference
+            app:key="choose_background"
+            app:title="@string/choose_background"
+            android:dependency="custom_bg_enabled" />
+
+        <Preference
+            app:key="remove_background"
+            app:title="@string/remove_background"
+            android:dependency="custom_bg_enabled" />
+
     </PreferenceCategory>
 
     <PreferenceCategory app:title="@string/navigation_bar">

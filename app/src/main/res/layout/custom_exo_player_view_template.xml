@@ -39,12 +39,19 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
-        <com.google.android.material.loadingindicator.LoadingIndicator
+        <FrameLayout
             android:id="@id/exo_buffering"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:indeterminate="true"
-            android:layout_gravity="center"/>
+            android:layout_gravity="center">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="center"
+                android:src="@drawable/breathing_logo" />
+
+        </FrameLayout>
 
         <TextView android:id="@id/exo_error_message"
             android:layout_width="wrap_content"
@@ -95,8 +102,8 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center|end"
-        android:layout_marginTop="10dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginBottom="60dp"
         android:layout_marginEnd="4dp"
         app:cardBackgroundColor="#88000000"
         app:strokeWidth="0dp"
@@ -127,13 +134,20 @@
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <com.google.android.material.loadingindicator.LoadingIndicator
+    <FrameLayout
         android:id="@+id/video_transition_progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:indeterminate="true"
-        android:visibility="gone" />
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@drawable/breathing_logo" />
+
+    </FrameLayout>
 
     <com.github.libretube.ui.views.FastForwardView
         android:id="@+id/fastForwardView"

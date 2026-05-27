@@ -2,7 +2,6 @@ package com.github.libretube.ui.preferences
 
 import android.os.Bundle
 import android.widget.LinearLayout
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.preference.Preference
 import com.github.libretube.BuildConfig
@@ -11,29 +10,14 @@ import com.github.libretube.constants.PreferenceKeys
 import com.github.libretube.helpers.PreferenceHelper
 import com.github.libretube.ui.base.BasePreferenceFragment
 import com.github.libretube.ui.dialogs.ErrorDialog
-import com.github.libretube.util.UpdateChecker
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class MainSettings : BasePreferenceFragment() {
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.settings, rootKey)
-
-        val update = findPreference<Preference>("update")
-        update?.summary = "v${BuildConfig.VERSION_NAME}"
-
-        // check app update manually
-        update?.setOnPreferenceClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {
-                UpdateChecker(requireContext()).checkUpdate(true)
-            }
-
-            true
-        }
 
         val crashlog = findPreference<Preference>("crashlog")
         crashlog?.isVisible = PreferenceHelper.getErrorLog().isNotEmpty() && BuildConfig.DEBUG

@@ -240,9 +240,26 @@
         android:paddingHorizontal="8dp"
         android:paddingVertical="15dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@+id/play_imageView"
+        app:layout_constraintBottom_toTopOf="@+id/player_channelName_mini"
         app:layout_constraintEnd_toStartOf="@+id/play_imageView"
         app:layout_constraintStart_toEndOf="@+id/player"
         app:layout_constraintTop_toTopOf="@+id/play_imageView" />
+
+    <TextView
+        android:id="@+id/player_channelName_mini"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:alpha="0"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:paddingHorizontal="8dp"
+        android:paddingBottom="2dp"
+        android:textSize="11sp"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@+id/play_imageView"
+        app:layout_constraintEnd_toStartOf="@+id/play_imageView"
+        app:layout_constraintStart_toEndOf="@+id/player"
+        app:layout_constraintTop_toBottomOf="@+id/title_textView" />
 
 </com.github.libretube.ui.views.SingleViewTouchableMotionLayout>

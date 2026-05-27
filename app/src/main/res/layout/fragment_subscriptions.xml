@@ -6,12 +6,20 @@
     android:layout_height="match_parent"
     tools:context=".ui.fragments.SubscriptionsFragment">
 
-    <com.google.android.material.loadingindicator.LoadingIndicator
+    <FrameLayout
         android:id="@+id/sub_progress"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:visibility="gone" />
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:src="@drawable/breathing_logo" />
+
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/emptyFeed"

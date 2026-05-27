@@ -14,7 +14,9 @@ import com.github.libretube.api.obj.StreamItem
 import com.github.libretube.constants.PreferenceKeys
 import com.github.libretube.db.DatabaseHelper
 import com.github.libretube.db.DatabaseHolder
+import com.github.libretube.db.obj.CachedCategoryFeedItem
 import com.github.libretube.db.obj.PlaylistBookmark
+import com.github.libretube.db.obj.SeenVideo
 import com.github.libretube.extensions.runSafely
 import com.github.libretube.extensions.toID
 import com.github.libretube.extensions.updateIfChanged
@@ -72,9 +74,11 @@ class HomeViewModel : ViewModel() {
     fun loadHomeFeed(
         context: Context,
         subscriptionsViewModel: SubscriptionsViewModel,
-        visibleItems: Set<String>
+        visibleItems: Set<String>,
+        forceRefresh: Boolean = false
     ) {
         isLoading.value = true
+        if (forceRefresh) continueWatchingLoaded = false
 
         loadHomeJob?.cancel()
         loadHomeJob = viewModelScope.launch {
@@ -146,7 +150,7 @@ class HomeViewModel : ViewModel() {
     }
 
     private suspend fun loadWatchingFromDB(): List<StreamItem> {
-        val videos = DatabaseHelper.getWatchHistoryPage(1, 20)
+        val videos = DatabaseHelper.getWatchHistoryPage(1, 50)
         val streamItems = videos.map { it.toStreamItem() }
 
         // only include items that have a saved watch position
@@ -173,23 +177,87 @@ class HomeViewModel : ViewModel() {
     }
 
     private suspend fun fetchFilteredPage(
-        query: String,
+        queryDef: CategoryFeedManager.QueryDef,
         context: Context,
-        watchedIds: Set<String>
+        watchedIds: Set<String>,
+        seenIds: Set<String>
     ): List<StreamItem> {
-        var attempts = 0
-        while (attempts < 3) {
+        val query = queryDef.query
+        repeat(MAX_RETRIES) {
             val items = runCatching {
                 categoryFeedRepository.getSearchPage(query)
-            }.getOrElse {
-                return emptyList()
-            }
+            }.onFailure {
+                return@repeat
+            }.getOrThrow()
+
             if (items.isEmpty()) return emptyList()
+
             val filtered = CategoryFeedManager.scoreAndFilter(items, watchedIds, context)
-            if (filtered.isNotEmpty()) return filtered.take(20)
-            attempts++
+                .filter { it.url !in seenIds }
+            if (filtered.isNotEmpty()) {
+                runCatching { cacheResults(queryDef, items) }
+                if (filtered.size >= MIN_CATEGORY_ITEMS) {
+                    return filtered.take(20)
+                }
+            }
         }
-        return emptyList()
+        return loadCachedResults(queryDef, watchedIds, seenIds, context)
+    }
+
+    private suspend fun cacheResults(
+        queryDef: CategoryFeedManager.QueryDef,
+        items: List<StreamItem>
+    ) = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val cachedItems = items.mapNotNull { item ->
+            val url = item.url ?: return@mapNotNull null
+            CachedCategoryFeedItem(
+                cacheKey = CachedCategoryFeedItem.buildCacheKey(
+                    queryDef.categoryId, queryDef.languageCode, url
+                ),
+                categoryId = queryDef.categoryId,
+                languageCode = queryDef.languageCode,
+                videoId = url,
+                title = item.title,
+                thumbnail = item.thumbnail,
+                uploaderName = item.uploaderName,
+                uploaderUrl = item.uploaderUrl,
+                uploaderAvatar = item.uploaderAvatar,
+                duration = item.duration,
+                views = item.views,
+                uploaded = item.uploaded,
+                uploaderVerified = item.uploaderVerified ?: false,
+                shortDescription = item.shortDescription,
+                isShort = item.isShort,
+                score = 0.0,
+                fetchedAt = now
+            )
+        }
+        DatabaseHolder.Database.categoryFeedDao().insertAll(cachedItems)
+        DatabaseHolder.Database.categoryFeedDao().deleteOlderThan(
+            System.currentTimeMillis() - CACHE_TTL_DAYS * 24 * 60 * 60 * 1000L
+        )
+    }
+
+    private suspend fun loadCachedResults(
+        queryDef: CategoryFeedManager.QueryDef,
+        watchedIds: Set<String>,
+        seenIds: Set<String>,
+        context: Context
+    ): List<StreamItem> {
+        val cached = runCatching {
+            withContext(Dispatchers.IO) {
+                DatabaseHolder.Database.categoryFeedDao()
+                    .getForQuery(queryDef.categoryId, queryDef.languageCode, 20)
+            }
+        }.getOrDefault(emptyList())
+        if (cached.isEmpty()) return emptyList()
+        val streamItems = cached.map { it.toStreamItem() }
+        return runCatching {
+            CategoryFeedManager.scoreAndFilter(streamItems, watchedIds, context)
+                .filter { it.url !in seenIds }
+                .take(20)
+        }.getOrDefault(emptyList())
     }
 
     private suspend fun loadPersonalizedCategories(context: Context) {
@@ -205,47 +273,79 @@ class HomeViewModel : ViewModel() {
         val languages = resolvedLanguages.ifEmpty { listOf("en") }
 
         val currentPrefs = Pair(categories, languages)
-        if (lastPrefs != null && lastPrefs != currentPrefs) {
+        val prefsChanged = lastPrefs != null && lastPrefs != currentPrefs
+        if (prefsChanged) {
             categoryFeedRepository.reset()
         }
         lastPrefs = currentPrefs
 
         val watchedIds = if (PlayerHelper.watchHistoryEnabled) {
             withContext(Dispatchers.IO) {
-                DatabaseHolder.Database.watchHistoryDao().getAll().map { it.videoId }.toSet()
+                runCatching {
+                    DatabaseHolder.Database.watchHistoryDao().getAll().map { it.videoId }.toSet()
+                }.getOrDefault(emptySet())
             }
         } else {
             emptySet()
         }
 
+        val seenIds = withContext(Dispatchers.IO) {
+            runCatching {
+                DatabaseHolder.Database.seenVideoDao()
+                    .getSeenSince(System.currentTimeMillis() - SEEN_TTL_DAYS * 24 * 60 * 60 * 1000L)
+                    .toMutableSet()
+            }.getOrDefault(mutableSetOf())
+        }
+
         val queries = CategoryFeedManager.buildQueries(categories, languages)
 
-        val results = withContext(Dispatchers.IO) {
+        val results = withContext(Dispatchers.Default) {
             coroutineScope {
                 queries.map { queryDef ->
                     async {
-                        queryDef to fetchFilteredPage(queryDef.query, context, watchedIds)
+                        val videos = fetchFilteredPage(queryDef, context, watchedIds, seenIds.toSet())
+                        // add fetched URLs to shared seenIds for intra-batch dedup
+                        val urls = videos.mapNotNull { it.url }
+                        synchronized(seenIds) { seenIds.addAll(urls) }
+                        queryDef to videos
                     }
                 }.awaitAll()
+            }
+        }
+
+        val allSeenUrls = results.flatMap { it.second }.mapNotNull { it.url }
+        if (allSeenUrls.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                val now = System.currentTimeMillis()
+                val seenVideos = allSeenUrls.map { SeenVideo(it, now) }
+                DatabaseHolder.Database.seenVideoDao().insertAll(seenVideos)
+                DatabaseHolder.Database.seenVideoDao().deleteOlderThan(
+                    now - SEEN_TTL_DAYS * 24 * 60 * 60 * 1000L
+                )
             }
         }
 
         val nonEmpty = results.filter { it.second.isNotEmpty() }
 
         if (nonEmpty.isNotEmpty()) {
-            val uniqueByUrl = mutableSetOf<String>()
-            val dedupedResults = nonEmpty.map { (queryDef, videos) ->
-                queryDef to videos.filter { it.url != null && uniqueByUrl.add(it.url) }
+            val dedupedResults = nonEmpty.mapNotNull { (queryDef, videos) ->
+                if (videos.isEmpty()) null else queryDef to videos
             }
 
-            categoryFeeds.postValue(
-                CategoryFeedData(
-                    categoryIds = dedupedResults.map { it.first.categoryId },
-                    labels = dedupedResults.map { CategoryFeedManager.getLabel(context, it.first.categoryId) },
-                    queries = dedupedResults.map { it.first.query },
-                    videos = dedupedResults.map { it.second }
+            if (dedupedResults.isNotEmpty()) {
+                categoryFeeds.postValue(
+                    CategoryFeedData(
+                        categoryIds = dedupedResults.map { it.first.categoryId },
+                        labels = dedupedResults.map { CategoryFeedManager.getLabel(context, it.first.categoryId) },
+                        queries = dedupedResults.map { it.first.query },
+                        videos = dedupedResults.map { it.second }
+                    )
                 )
-            )
+                return
+            }
+        }
+        if (prefsChanged) {
+            categoryFeeds.postValue(null)
         }
     }
 
@@ -256,6 +356,10 @@ class HomeViewModel : ViewModel() {
         private const val TRENDING = "trending"
         private const val BOOKMARKS = "bookmarks"
         private const val PLAYLISTS = "playlists"
+        private const val MAX_RETRIES = 3
+        private const val MIN_CATEGORY_ITEMS = 5
+        private const val CACHE_TTL_DAYS = 7L
+        private const val SEEN_TTL_DAYS = 90L
         private const val PERSONALIZED = "personalized_categories"
     }
 }

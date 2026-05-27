@@ -3,6 +3,9 @@ package com.github.libretube.ui.base
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
@@ -15,6 +18,7 @@ import com.github.libretube.helpers.PreferenceHelper
 import com.github.libretube.helpers.ThemeHelper
 import com.github.libretube.helpers.ThemeHelper.getThemeMode
 import com.github.libretube.helpers.WindowHelper
+import java.io.File
 import java.util.Locale
 
 /**
@@ -57,6 +61,30 @@ open class BaseActivity : AppCompatActivity() {
         enableEdgeToEdge()
 
         super.onCreate(savedInstanceState)
+
+        // apply custom background if set
+        applyCustomBackground()
+    }
+
+    private fun applyCustomBackground() {
+        if (isDialogActivity) return
+        val enabled = PreferenceHelper.getBoolean(PreferenceKeys.CUSTOM_BACKGROUND_ENABLED, false)
+        if (!enabled) return
+        val bgPath = PreferenceHelper.getString(PreferenceKeys.CUSTOM_BACKGROUND_PATH, "")
+        if (bgPath.isBlank()) return
+        val bgFile = File(bgPath)
+        if (!bgFile.exists()) return
+        try {
+            val bitmap = BitmapFactory.decodeFile(bgFile.absolutePath)
+            if (bitmap != null) {
+                val bgDrawable = BitmapDrawable(resources, bitmap)
+                val scrim = android.graphics.drawable.ColorDrawable(0x80000000.toInt())
+                val layers = LayerDrawable(arrayOf(bgDrawable, scrim))
+                window.decorView.background = layers
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun attachBaseContext(newBase: Context?) {

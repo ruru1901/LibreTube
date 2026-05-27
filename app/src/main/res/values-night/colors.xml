@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="splash_screen_icon_color">#ccc</color>
+    <color name="splash_glow_color">#FFFFFF</color>
     <color name="yt_dark_surface">#0F0F0F</color>
     <color name="yt_dark_surface_variant">#1E1E1E</color>
     <color name="yt_dark_on_surface">#E6E1E5</color>

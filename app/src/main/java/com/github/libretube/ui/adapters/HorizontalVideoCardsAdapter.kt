@@ -44,6 +44,9 @@ class HorizontalVideoCardsAdapter :
             ImageHelper.loadImage(video.thumbnail, binding.thumbnail)
             binding.videoTitle.text = video.title
             binding.channelName.text = video.uploaderName
+            if (video.uploaderAvatar != null) {
+                ImageHelper.loadImage(video.uploaderAvatar, binding.channelAvatar, true)
+            }
 
             video.duration?.let {
                 binding.thumbnailDuration.setFormattedDuration(it, video.isShort, video.uploaded)

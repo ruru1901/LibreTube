@@ -7,9 +7,10 @@
     <color name="skeleton_shimmer_color">#E0E0E0</color>
     <color name="skeleton_shimmer_color_dark">#2A2A2A</color>
 
-    <!-- YouTube-style colors -->
-    <color name="youtube_red">#FF0000</color>
-    <color name="youtube_red_dark">#CC0000</color>
+    <!-- Accent colors (light mode = black, dark mode = warm white) -->
+    <color name="accent_light">#000000</color>
+    <color name="accent_dark">#FFFFFF</color>
+    <color name="splash_glow_color">#000000</color>
     <color name="youtube_white">#FFFFFF</color>
     <color name="youtube_light_gray">#F1F1F1</color>
     <color name="youtube_dark_surface">#0F0F0F</color>

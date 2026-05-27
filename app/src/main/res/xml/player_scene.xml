@@ -84,11 +84,28 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
+            android:layout_marginBottom="2dp"
             android:alpha="1"
             android:visibility="visible"
-            motion:layout_constraintBottom_toBottomOf="@+id/play_imageView"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
+            motion:layout_constraintBottom_toTopOf="@+id/player_channelName_mini"
             motion:layout_constraintEnd_toStartOf="@+id/play_imageView"
             motion:layout_constraintStart_toEndOf="@+id/player"
             motion:layout_constraintTop_toTopOf="@+id/play_imageView" />
+        <Constraint
+            android:id="@+id/player_channelName_mini"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
+            android:textSize="12sp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            motion:layout_constraintBottom_toBottomOf="@+id/close_imageView"
+            motion:layout_constraintEnd_toStartOf="@+id/play_imageView"
+            motion:layout_constraintStart_toEndOf="@+id/player"
+            motion:layout_constraintTop_toBottomOf="@+id/title_textView" />
     </ConstraintSet>
 </MotionScene>
